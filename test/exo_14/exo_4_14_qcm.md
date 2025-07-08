@@ -1,0 +1,150 @@
+\begin{exercise}{
+Title_exo: % Nom de l'exercice
+Modules: % NameID des modules
+Recommended_execution_time: 10 % Temps conseillé pour l'exercice (en minutes)
+Ex_Level: Elementary % Niveau de difficulté de l'exercice (Elementary, Intermediary, Advanced)
+Chap: % NameID des chapitres
+Involved_Concepts: % ID ou NameID des notions
+Original_source: % Source de l'exercice
+}
+{
+% Contenu de l'exercice
+Résoudre les équations suivantes.
+
+\qcm{%Enoncé de la question: 
+Résoudre l'équation suivante : 
+\begin{equation}
+\label{Eq1}
+\mathrm{e}^{x} = 2
+\end{equation}
+}
+{
+\right{$x = \ln 2$}
+\wrong{$x = \ln 4$}
+\wrong{$x = \frac{1}{2} \ln 2$}
+\wrong{$x = \frac{1}{2} \ln 4$}
+}
+{%Indice: 
+Utilisez les propriétés des logarithmes et des exponentielles pour résoudre chaque équation.
+}
+{%Solution détaillée:
+ 
+\begin{equation*}
+\label{Eq1}
+\mathrm{e}^{x} = 2
+\Longleftrightarrow
+x = \ln 2.
+\end{equation*}
+On a donc montré que l'unique solution de l'équation [](#Eq1) est $x = \ln 2$.
+}
+{
+% Répartition des poids (Total = 100)
+logic: 25
+abstraction: 25
+reasoning: 25
+calculation: 25
+}
+
+
+\qcm{%Enoncé de la question: 
+Résoudre l'équation suivante : 
+\begin{equation}
+\label{Eq2}
+\mathrm{e}^{x} = \frac{1}{4}
+\end{equation}
+}
+{
+\right{$x = - \ln 4$}
+\wrong{$x = \ln \frac{1}{4}$}
+\wrong{$x = - \frac{1}{2} \ln 4$}
+\wrong{$x = \frac{1}{4} \ln 4$}
+}{%Indice: 
+Utilisez les propriétés des logarithmes et des exponentielles pour résoudre chaque équation.
+}
+{%Solution détaillée: Pour chaque équation :
+Pour résoudre [](#Eq2), et puisqu'on peut prendre le logarithme de $\frac{1}{4}$, il suffit de prendre 
+le logarithme népérien de chaque côté de  [](#Eq2). On a donc: 
+\begin{equation*}
+\label{Eq1}
+\mathrm{e}^{x} = \frac{1}{4}
+\Longleftrightarrow
+x = \ln\left(\frac{1}{4}\right)
+\Longleftrightarrow
+x = \ln 1 -  \ln4
+\Longleftrightarrow
+x = -  \ln4.
+\end{equation*}
+On a donc montré que l'unique solution de l'équation [](#Eq2) est $x = -  \ln4$.
+}
+{
+% Répartition des poids (Total = 100)
+logic: 25
+abstraction: 25
+reasoning: 25
+calculation: 25
+}
+
+
+
+
+\qcm{%Enoncé de la question: 
+Résoudre l'équation suivante : 
+\begin{equation}
+\label{Eq3}
+\ln(x) = \frac{\ln(5)}{2}
+\end{equation}
+}
+{
+\right{$x = \sqrt{5}$}
+\wrong{$x = 5$}
+\wrong{$x = \frac{1}{2} \sqrt{5}$}
+\wrong{$x = 5^{\frac{1}{2}}$}
+}
+{%Indice: 
+Utilisez les propriétés des logarithmes et des exponentielles pour résoudre chaque équation.
+}
+{%Solution détaillée:
+
+
+}
+{
+% Répartition des poids (Total = 100)
+logic: 25
+abstraction: 25
+reasoning: 25
+calculation: 25
+}
+
+
+\qcm{%Enoncé de la question: 
+Résoudre l'équation suivante : 
+\begin{equation}
+\label{Eq4}
+\ln(x) = -\ln(9).
+\end{equation}
+}
+{
+\right{$x = \frac{1}{9}$}
+\wrong{$x = \frac{1}{3}$}
+\wrong{$x = 9$}
+\wrong{$x = -9$}
+
+}
+{%Indice: 
+Utilisez les propriétés des logarithmes et des exponentielles pour résoudre chaque équation.
+}
+{%Solution détaillée: Pour chaque équation :
+
+ $x = \frac{1}{9}.$
+
+}
+{
+% Répartition des poids (Total = 100)
+logic: 25
+abstraction: 25
+reasoning: 25
+calculation: 25
+}
+
+}
+\end{exercise}
