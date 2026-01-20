@@ -1,0 +1,104 @@
+
+import unidecode
+import re
+
+def clean_name(name):
+    name = name.lower()
+    name = unidecode.unidecode(name)
+    name = re.sub(r'[^a-z0-9\s]', '', name)
+    name = re.sub(r'\s+', ' ', name).strip()
+    return name
+
+# Liste de tous les noms et alias
+all_names = [alias for aliases in universites_paris.values() for alias in aliases]
+all_names = [clean_name(n) for n in all_names]
+from sklearn.feature_extraction.text import CountVectorizer
+
+vectorizer = CountVectorizer(analyzer='char_wb', ngram_range=(2,4))
+X_all = vectorizer.fit_transform(all_names).toarray()
+pairs = []
+
+# Positives
+for aliases in universites_paris.values():
+    aliases_clean = [clean_name(a) for a in aliases]
+    for i in range(len(aliases_clean)):
+        for j in range(i+1, len(aliases_clean)):
+            pairs.append((aliases_clean[i], aliases_clean[j], 1))
+
+# Négatives
+uni_list = list(universites_paris.values())
+for i in range(len(uni_list)):
+    for j in range(i+1, len(uni_list)):
+        for a1 in uni_list[i]:
+            for a2 in uni_list[j]:
+                pairs.append((clean_name(a1), clean_name(a2), 0))
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+
+class NameEmbeddingNN(nn.Module):
+    def __init__(self, input_dim, embedding_dim=32):
+        super().__init__()
+        self.fc1 = nn.Linear(input_dim, 64)
+        self.fc2 = nn.Linear(64, embedding_dim)
+        
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+def contrastive_loss(emb1, emb2, label, margin=0.5):
+    cos_sim = F.cosine_similarity(emb1, emb2)
+    loss = label * (1 - cos_sim) + (1 - label) * F.relu(cos_sim - margin)
+    return loss.mean()
+X1 = torch.tensor([vectorizer.transform([p[0]]).toarray()[0] for p in pairs], dtype=torch.float32)
+X2 = torch.tensor([vectorizer.transform([p[1]]).toarray()[0] for p in pairs], dtype=torch.float32)
+y = torch.tensor([p[2] for p in pairs], dtype=torch.float32)
+model = NameEmbeddingNN(input_dim=X1.shape[1])
+optimizer = optim.Adam(model.parameters(), lr=1e-3)
+
+for epoch in range(80):
+    optimizer.zero_grad()
+    emb1 = model(X1)
+    emb2 = model(X2)
+    loss = contrastive_loss(emb1, emb2, y)
+    loss.backward()
+    optimizer.step()
+    if epoch % 5 == 0:
+        print(f"Epoch {epoch}, Loss: {loss.item():.4f}")
+
+noms_principaux = [
+    "Université Paris 1 Panthéon-Sorbonne",
+    "Université Paris 2 Panthéon-Assas",
+    "Université Paris Descartes",
+    "Université Paris Cité",
+    "Sorbonne paris nord "
+]
+
+# Nettoyer les noms principaux
+noms_principaux_clean = [clean_name(n) for n in noms_principaux]
+
+# Transformer en vecteurs pour le modèle
+X_principaux = torch.tensor(vectorizer.transform(noms_principaux_clean).toarray(), dtype=torch.float32)
+
+# Embeddings des noms principaux
+with torch.no_grad():  # pas besoin de calcul de gradient pour l'inférence
+    emb_principaux = model(X_principaux)
+
+
+def assign_principal(alias, emb_principaux, noms_principaux, vectorizer, model):
+    alias_clean = clean_name(alias)
+    X_alias = torch.tensor(vectorizer.transform([alias_clean]).toarray(), dtype=torch.float32)
+    
+    with torch.no_grad():
+        emb_alias = model(X_alias)
+        # Calculer la cosine similarity avec tous les noms principaux
+        cos_sim = F.cosine_similarity(emb_alias, emb_principaux)
+        idx_max = torch.argmax(cos_sim).item()
+    
+    return noms_principaux[idx_max], cos_sim[idx_max].item()
+
+alias_test = "13"
+principal, score = assign_principal(alias_test, emb_principaux, noms_principaux, vectorizer, model)
+print(f"{alias_test} -> {principal} (cosine similarity={score:.4f})")
