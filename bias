@@ -1,0 +1,318 @@
+Je te propose une **sélection propre d’articles de recherche pertinents et exploitables aujourd’hui** pour étudier les **biais de genre et d’âge dans les LLM et les corpus textuels**.
+Les **liens sont écrits directement** pour pouvoir être copiés facilement.
+
+---
+
+# 1️⃣ Bias Out-of-the-Box: Intersectional Occupational Biases in Generative Language Models
+
+**Auteurs** : Hannah Kirk et al.
+**Année** : 2021
+
+Lien :
+[https://arxiv.org/abs/2102.04130](https://arxiv.org/abs/2102.04130)
+
+### Pourquoi ce papier est important
+
+C’est un des premiers travaux à analyser les **biais dans les modèles génératifs**.
+
+### Méthodologie
+
+Les auteurs génèrent des textes avec des prompts comme :
+
+```
+The person works as a ...
+The woman works as a ...
+The man works as a ...
+```
+
+Puis ils analysent les professions générées.
+
+### Résultat principal
+
+Les modèles génèrent :
+
+* plus de métiers techniques pour les hommes
+* plus de métiers de soin pour les femmes.
+
+### Implémentation aujourd’hui
+
+Tu peux reproduire cette expérience avec :
+
+* LLaMA 3
+* Mistral 7B
+* GPT-4
+
+---
+
+# 2️⃣ StereoSet: Measuring Stereotypical Bias in Pretrained Language Models
+
+**Auteurs** : Nadeem et al.
+**Conférence** : ACL
+
+Lien :
+[https://arxiv.org/abs/2004.09456](https://arxiv.org/abs/2004.09456)
+
+### Contribution
+
+Création d’un **benchmark pour mesurer les biais dans les modèles de langage**.
+
+Le dataset contient :
+
+* biais de genre
+* biais religieux
+* biais racial.
+
+### Métrique principale
+
+StereoSet introduit un score :
+
+```
+Stereotype Score (SS)
+```
+
+qui mesure la préférence du modèle pour une phrase stéréotypée.
+
+### Utilisation
+
+Très utilisé pour comparer les LLM.
+
+---
+
+# 3️⃣ CrowS-Pairs: Measuring Social Biases in Masked Language Models
+
+**Auteurs** : Nangia et al.
+**Conférence** : EMNLP 2020
+
+Lien :
+[https://arxiv.org/abs/2010.00133](https://arxiv.org/abs/2010.00133)
+
+### Contribution
+
+Dataset de **1500 paires de phrases stéréotypées et anti-stéréotypées**.
+
+Exemple :
+
+```
+The doctor said he was tired
+The doctor said she was tired
+```
+
+On mesure quelle phrase le modèle préfère.
+
+### Implémentation
+
+Souvent utilisé avec :
+
+* BERT
+* RoBERTa
+
+---
+
+# 4️⃣ HolisticBias Dataset
+
+**Auteurs** : Smith et al.
+**Année** : 2022
+
+Lien :
+[https://arxiv.org/abs/2205.09209](https://arxiv.org/abs/2205.09209)
+
+### Contribution
+
+Dataset moderne conçu pour les LLM.
+
+Il contient plus de :
+
+```
+450 000 prompts
+```
+
+et couvre **13 dimensions de biais**, notamment :
+
+* genre
+* âge
+* religion
+* handicap
+* statut socio-économique.
+
+### Exemple de prompt
+
+```
+A young woman should ...
+An old man should ...
+```
+
+Très utile pour étudier **les biais liés à l’âge**.
+
+---
+
+# 5️⃣ Investigating Subtler Biases in LLMs
+
+**Auteurs** : Kamruzzaman et al.
+**Année** : 2023
+
+Lien :
+[https://arxiv.org/abs/2309.08902](https://arxiv.org/abs/2309.08902)
+
+### Sujet
+
+Analyse des biais moins étudiés dans les LLM :
+
+* âge
+* beauté
+* statut institutionnel.
+
+### Méthode
+
+Les auteurs utilisent des prompts comme :
+
+```
+The young person is ...
+The old person is ...
+```
+
+Puis ils analysent :
+
+* les adjectifs générés
+* le sentiment associé.
+
+### Résultat
+
+Les modèles associent souvent :
+
+* jeunes → traits positifs
+* personnes âgées → traits négatifs.
+
+---
+
+# 6️⃣ Self-Debiasing Techniques for Language Models
+
+**Auteurs** : Schick et al.
+**Année** : 2021
+
+Lien :
+[https://arxiv.org/abs/2103.00453](https://arxiv.org/abs/2103.00453)
+
+### Contribution
+
+Méthode de **debiasing sans réentraîner le modèle**.
+
+Principe :
+
+1. identifier les tokens biaisés
+2. réduire leur probabilité de génération.
+
+### Avantage
+
+Technique applicable même à des **modèles fermés**.
+
+---
+
+# 7️⃣ Man is to Computer Programmer as Woman is to Homemaker
+
+**Auteurs** : Bolukbasi et al.
+**Conférence** : NeurIPS
+
+Lien :
+[https://arxiv.org/abs/1607.06520](https://arxiv.org/abs/1607.06520)
+
+### Contribution
+
+Papier fondateur montrant que les **word embeddings apprennent des stéréotypes de genre**.
+
+Exemple :
+
+```
+man : computer programmer
+woman : homemaker
+```
+
+### Technique proposée
+
+Méthode de **Hard Debiasing** des embeddings.
+
+---
+
+# 8️⃣ Fairness and Bias in Large Language Models: A Survey
+
+**Année** : 2023
+
+Lien :
+[https://arxiv.org/abs/2309.00770](https://arxiv.org/abs/2309.00770)
+
+### Contribution
+
+Survey complet couvrant :
+
+* sources de biais
+* benchmarks
+* méthodes de mitigation.
+
+Très utile pour faire **un état de l’art**.
+
+---
+
+# 📊 Pipeline moderne pour étudier les biais dans les LLM
+
+Aujourd’hui la plupart des recherches utilisent ce workflow :
+
+### 1️⃣ Dataset
+
+* StereoSet
+* CrowS-Pairs
+* HolisticBias
+
+---
+
+### 2️⃣ Modèles
+
+Typiquement :
+
+* LLaMA 3
+* Mistral 7B
+* GPT-4
+
+---
+
+### 3️⃣ Analyse
+
+Méthodes fréquentes :
+
+```
+stereotype score
+bias amplification
+sentiment analysis
+occupation distribution
+```
+
+---
+
+### 4️⃣ Mitigation
+
+Trois grandes approches :
+
+**niveau dataset**
+
+```
+counterfactual data augmentation
+```
+
+**niveau modèle**
+
+```
+adversarial training
+```
+
+**niveau inference**
+
+```
+prompt debiasing
+```
+
+---
+
+✅ Si tu veux, je peux aussi te montrer :
+
+* **15 papiers récents (ACL, EMNLP, NeurIPS 2023-2025) sur les biais des LLM**
+* **les meilleurs datasets pour étudier les biais d’âge**
+* **un pipeline Python complet pour mesurer ces biais sur Mistral ou LLaMA**
+* **les métriques SOTA utilisées dans la recherche actuelle**.
