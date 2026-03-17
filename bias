@@ -1,318 +1,138 @@
-Je te propose une **sélection propre d’articles de recherche pertinents et exploitables aujourd’hui** pour étudier les **biais de genre et d’âge dans les LLM et les corpus textuels**.
-Les **liens sont écrits directement** pour pouvoir être copiés facilement.
+Parfait — voici une version **professionnelle, claire et présentable**, avec **explication précise de chaque notation**.
 
 ---
 
-# 1️⃣ Bias Out-of-the-Box: Intersectional Occupational Biases in Generative Language Models
+# Résumé — Gender Biases in LLM-Generated Reference Letters
 
-**Auteurs** : Hannah Kirk et al.
-**Année** : 2021
+## Objectif
 
-Lien :
-[https://arxiv.org/abs/2102.04130](https://arxiv.org/abs/2102.04130)
+L’article analyse les biais de genre dans les lettres de recommandation générées par les modèles de langage (LLMs).
 
-### Pourquoi ce papier est important
-
-C’est un des premiers travaux à analyser les **biais dans les modèles génératifs**.
-
-### Méthodologie
-
-Les auteurs génèrent des textes avec des prompts comme :
-
-```
-The person works as a ...
-The woman works as a ...
-The man works as a ...
-```
-
-Puis ils analysent les professions générées.
-
-### Résultat principal
-
-Les modèles génèrent :
-
-* plus de métiers techniques pour les hommes
-* plus de métiers de soin pour les femmes.
-
-### Implémentation aujourd’hui
-
-Tu peux reproduire cette expérience avec :
-
-* LLaMA 3
-* Mistral 7B
-* GPT-4
+Il montre que, même à compétences égales, les descriptions diffèrent selon le genre, ce qui peut introduire des biais dans des processus comme le recrutement.
 
 ---
 
-# 2️⃣ StereoSet: Measuring Stereotypical Bias in Pretrained Language Models
+## Approche
 
-**Auteurs** : Nadeem et al.
-**Conférence** : ACL
+Deux types de génération sont comparés :
 
-Lien :
-[https://arxiv.org/abs/2004.09456](https://arxiv.org/abs/2004.09456)
+* **CLG (sans contexte)** : uniquement nom + genre
+* **CBG (avec contexte)** : biographie complète
 
-### Contribution
+Les textes générés sont ensuite analysés selon :
 
-Création d’un **benchmark pour mesurer les biais dans les modèles de langage**.
-
-Le dataset contient :
-
-* biais de genre
-* biais religieux
-* biais racial.
-
-### Métrique principale
-
-StereoSet introduit un score :
-
-```
-Stereotype Score (SS)
-```
-
-qui mesure la préférence du modèle pour une phrase stéréotypée.
-
-### Utilisation
-
-Très utilisé pour comparer les LLM.
+* le vocabulaire utilisé
+* le style d’écriture
+* les hallucinations (informations inventées)
 
 ---
 
-# 3️⃣ CrowS-Pairs: Measuring Social Biases in Masked Language Models
+## Résultats principaux
 
-**Auteurs** : Nangia et al.
-**Conférence** : EMNLP 2020
+* Les hommes sont davantage décrits avec des termes liés :
 
-Lien :
-[https://arxiv.org/abs/2010.00133](https://arxiv.org/abs/2010.00133)
+  * au **leadership**
+  * à la **compétence**
 
-### Contribution
+* Les femmes sont davantage associées à :
 
-Dataset de **1500 paires de phrases stéréotypées et anti-stéréotypées**.
+  * des qualités **relationnelles**
+  * des traits **sociaux**
 
-Exemple :
-
-```
-The doctor said he was tired
-The doctor said she was tired
-```
-
-On mesure quelle phrase le modèle préfère.
-
-### Implémentation
-
-Souvent utilisé avec :
-
-* BERT
-* RoBERTa
+Ces biais persistent même lorsque les profils sont identiques.
 
 ---
 
-# 4️⃣ HolisticBias Dataset
+## Mesure des biais
 
-**Auteurs** : Smith et al.
-**Année** : 2022
+### 1. Comparaison des mots (Odds Ratio)
 
-Lien :
-[https://arxiv.org/abs/2205.09209](https://arxiv.org/abs/2205.09209)
+[
+OR = \frac{P(w \mid H)}{P(w \mid F)}
+]
 
-### Contribution
+* ( w ) : un mot (ex : *leader*, *supportive*)
+* ( H ) : ensemble des textes pour les hommes
+* ( F ) : ensemble des textes pour les femmes
+* ( P(w \mid H) ) : probabilité que le mot apparaisse dans les textes pour hommes
 
-Dataset moderne conçu pour les LLM.
-
-Il contient plus de :
-
-```
-450 000 prompts
-```
-
-et couvre **13 dimensions de biais**, notamment :
-
-* genre
-* âge
-* religion
-* handicap
-* statut socio-économique.
-
-### Exemple de prompt
-
-```
-A young woman should ...
-An old man should ...
-```
-
-Très utile pour étudier **les biais liés à l’âge**.
+👉 Cette mesure permet de voir si un mot est plus associé à un genre.
 
 ---
 
-# 5️⃣ Investigating Subtler Biases in LLMs
+### 2. Test statistique (t-test)
 
-**Auteurs** : Kamruzzaman et al.
-**Année** : 2023
+[
+t = \frac{\bar{x}_H - \bar{x}_F}{\sqrt{\frac{s_H^2}{n_H} + \frac{s_F^2}{n_F}}}
+]
 
-Lien :
-[https://arxiv.org/abs/2309.08902](https://arxiv.org/abs/2309.08902)
+### Explication des termes :
 
-### Sujet
+* ( \bar{x}_H ) : **moyenne d’un score** pour les hommes
+  (ex : score de positivité ou d’agentivité des lettres pour hommes)
 
-Analyse des biais moins étudiés dans les LLM :
+* ( \bar{x}_F ) : **moyenne du même score** pour les femmes
 
-* âge
-* beauté
-* statut institutionnel.
+* ( s_H^2 ) : **variance** des scores pour les hommes
 
-### Méthode
+* ( s_F^2 ) : **variance** des scores pour les femmes
 
-Les auteurs utilisent des prompts comme :
+* ( n_H ) : nombre de textes générés pour les hommes
 
-```
-The young person is ...
-The old person is ...
-```
-
-Puis ils analysent :
-
-* les adjectifs générés
-* le sentiment associé.
-
-### Résultat
-
-Les modèles associent souvent :
-
-* jeunes → traits positifs
-* personnes âgées → traits négatifs.
+* ( n_F ) : nombre de textes générés pour les femmes
 
 ---
 
-# 6️⃣ Self-Debiasing Techniques for Language Models
+### Intuition du t-test
 
-**Auteurs** : Schick et al.
-**Année** : 2021
+Cette formule mesure :
 
-Lien :
-[https://arxiv.org/abs/2103.00453](https://arxiv.org/abs/2103.00453)
+[
+\text{différence observée} \div \text{variabilité des données}
+]
 
-### Contribution
+👉 Si ( t ) est grand :
 
-Méthode de **debiasing sans réentraîner le modèle**.
-
-Principe :
-
-1. identifier les tokens biaisés
-2. réduire leur probabilité de génération.
-
-### Avantage
-
-Technique applicable même à des **modèles fermés**.
+* la différence entre hommes et femmes est **significative**
+* donc le biais est **réel et pas dû au hasard**
 
 ---
 
-# 7️⃣ Man is to Computer Programmer as Woman is to Homemaker
+## Résultat clé
 
-**Auteurs** : Bolukbasi et al.
-**Conférence** : NeurIPS
+Même avec contexte :
 
-Lien :
-[https://arxiv.org/abs/1607.06520](https://arxiv.org/abs/1607.06520)
+[
+\text{Bias}*{CBG} \approx \text{Bias}*{CLG}
+]
 
-### Contribution
-
-Papier fondateur montrant que les **word embeddings apprennent des stéréotypes de genre**.
-
-Exemple :
-
-```
-man : computer programmer
-woman : homemaker
-```
-
-### Technique proposée
-
-Méthode de **Hard Debiasing** des embeddings.
+👉 Le biais persiste même avec des informations détaillées.
 
 ---
 
-# 8️⃣ Fairness and Bias in Large Language Models: A Survey
+## Impact des hallucinations
 
-**Année** : 2023
+Les modèles peuvent inventer des informations, ce qui renforce les biais :
 
-Lien :
-[https://arxiv.org/abs/2309.00770](https://arxiv.org/abs/2309.00770)
+[
+\text{Bias}*{total} = \text{Bias}*{modèle} + \text{Bias}_{hallucination}
+]
 
-### Contribution
-
-Survey complet couvrant :
-
-* sources de biais
-* benchmarks
-* méthodes de mitigation.
-
-Très utile pour faire **un état de l’art**.
+* **Bias modèle** : biais appris dans les données
+* **Bias hallucination** : biais ajouté par des informations inventées
 
 ---
 
-# 📊 Pipeline moderne pour étudier les biais dans les LLM
+## Conclusion
 
-Aujourd’hui la plupart des recherches utilisent ce workflow :
+* Les LLMs reproduisent des biais de genre existants
+* Ces biais sont mesurables statistiquement
+* Ils persistent même avec du contexte
+* Les hallucinations les amplifient
 
-### 1️⃣ Dataset
-
-* StereoSet
-* CrowS-Pairs
-* HolisticBias
-
----
-
-### 2️⃣ Modèles
-
-Typiquement :
-
-* LLaMA 3
-* Mistral 7B
-* GPT-4
+👉 Conclusion opérationnelle :
+Les LLMs doivent être **audités et contrôlés** avant utilisation dans des contextes sensibles comme les ressources humaines.
 
 ---
 
-### 3️⃣ Analyse
-
-Méthodes fréquentes :
-
-```
-stereotype score
-bias amplification
-sentiment analysis
-occupation distribution
-```
-
----
-
-### 4️⃣ Mitigation
-
-Trois grandes approches :
-
-**niveau dataset**
-
-```
-counterfactual data augmentation
-```
-
-**niveau modèle**
-
-```
-adversarial training
-```
-
-**niveau inference**
-
-```
-prompt debiasing
-```
-
----
-
-✅ Si tu veux, je peux aussi te montrer :
-
-* **15 papiers récents (ACL, EMNLP, NeurIPS 2023-2025) sur les biais des LLM**
-* **les meilleurs datasets pour étudier les biais d’âge**
-* **un pipeline Python complet pour mesurer ces biais sur Mistral ou LLaMA**
-* **les métriques SOTA utilisées dans la recherche actuelle**.
+Si tu veux, je peux te faire une **slide prête à présenter (PowerPoint)** avec ce contenu.
