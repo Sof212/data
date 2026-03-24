@@ -139,3 +139,31 @@ def detect_bad_labels(threshold=0.5):
 
 bad_labels = detect_bad_labels()
 print(bad_labels)
+
+
+
+
+import re
+
+def concat_word_number(text):
+    """
+    Concatène les mots suivis directement par un chiffre dans une chaîne de caractères.
+    Exemple : "Paris 1" -> "Paris1"
+    """
+    if not isinstance(text, str):
+        return ""
+    
+    # Remplacer "mot espace chiffre" par "motchiffre"
+    text = re.sub(r'(\b\w+)\s+(\d+)\b', r'\1\2', text)
+    return text.strip()
+
+# Tests
+examples = [
+    "Paris 1",
+    "Université Paris 1",
+    "Paris",
+    "Fac Lyon 2"
+]
+
+for e in examples:
+    print(e, "->", concat_word_number(e))
