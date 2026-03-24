@@ -1,139 +1,141 @@
-# ------------------------
-# 1️⃣ Importations
-# ------------------------
-from sentence_transformers import SentenceTransformer, CrossEncoder, InputExample, losses
-from torch.utils.data import DataLoader
-from rapidfuzz import process
+import pandas as pd
 import numpy as np
-import unicodedata
+import re
+from unidecode import unidecode
+from rapidfuzz import fuzz
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
-# ------------------------
-# 2️⃣ Nettoyage du texte
-# ------------------------
-def clean_text(text):
-    text = text.lower().strip()
-    text = ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
-    text = text.replace("-", " ").replace("’", "'")
-    return text
+def normalize(text):
+    text = str(text).lower()
+    text = unidecode(text)
 
-# ------------------------
-# 3️⃣ Référentiel canonique
-# ------------------------
-referentiel = [
-    "HEC Paris",
-    "Sorbonne Paris Nord",
-    "École Polytechnique",
-    "Université Paris Dauphine",
-    "Paris Panthéon Assas",
-    "Université Paris-Saclay"
-]
+    # enlever ponctuation
+    text = re.sub(r"[^\w\s]", " ", text)
 
-# ------------------------
-# 4️⃣ Aliases
-# ------------------------
-CANONICAL_TO_ALIASES = {
-    "HEC Paris": ["hec", "hec paris", "hec business school", "hautes etudes commerciales"],
-    "Sorbonne Paris Nord": ["paris 13", "paris xiii", "universite paris 13", "paris nord"],
-    "École Polytechnique": ["x", "l'x", "polytechnique", "ecole polytechnique", "ecole d'ingénieur x"],
-    "Université Paris Dauphine": ["dauphine", "paris dauphine", "universite dauphine", "dauphine psl"],
-    "Paris Panthéon Assas": ["assas", "pantheon assas", "universite assas", "paris assas"],
-    "Université Paris-Saclay": ["paris saclay", "universite paris saclay", "u-psl"]
-}
+    # mots inutiles
+    stopwords = {
+        "universite", "university", "univ",
+        "ecole", "school", "college",
+        "lycee", "institut"
+    }
 
-ALIAS_TO_CANONICAL = {}
-for canonical, aliases in CANONICAL_TO_ALIASES.items():
-    for alias in aliases:
-        ALIAS_TO_CANONICAL[clean_text(alias)] = canonical
-for canonical in referentiel:
-    ALIAS_TO_CANONICAL[clean_text(canonical)] = canonical
+    tokens = text.split()
+    tokens = [t for t in tokens if t not in stopwords]
 
-# ------------------------
-# 5️⃣ Charger les modèles
-# ------------------------
-bi_encoder = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    return " ".join(tokens)
 
-# Embeddings BiEncoder pour le référentiel
-ref_embeddings = bi_encoder.encode(referentiel, normalize_embeddings=True)
+df = pd.read_csv("data.csv")
 
-# ------------------------
-# 6️⃣ Fonction Sigmoid pour CrossEncoder
-# ------------------------
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+# colonnes attendues :
+# user_input | annotated_label
 
-# ------------------------
-# 7️⃣ Fonction normalize
-# ------------------------
-def normalize(name, fuzzy_threshold=0.85, ai_threshold=0.9):
-    name_clean = clean_text(name)
+df["clean_input"] = df["user_input"].apply(normalize)
+df["clean_label"] = df["annotated_label"].apply(normalize)
 
-    # 1️⃣ Alias exact
-    if name_clean in ALIAS_TO_CANONICAL:
-        return {"input": name, "canonical": ALIAS_TO_CANONICAL[name_clean], "score": 1.0, "method": "alias"}
 
-    # 2️⃣ Fuzzy matching
-    candidates_aliases = list(ALIAS_TO_CANONICAL.keys())
-    best_match, score, _ = process.extractOne(name_clean, candidates_aliases)
-    normalized_score = score / 100
+label_groups = (
+    df.groupby("clean_label")["clean_input"]
+    .apply(list)
+    .to_dict()
+)
 
-    if normalized_score >= ai_threshold:
-        return {"input": name, "canonical": ALIAS_TO_CANONICAL[best_match], "score": normalized_score, "method": "fuzzy"}
 
-    # 3️⃣ IA BiEncoder + CrossEncoder
-    query_emb = bi_encoder.encode([name_clean], normalize_embeddings=True)
-    scores = np.dot(query_emb, ref_embeddings.T)[0]
-    top_idx = np.argsort(scores)[-5:]
-    candidates = [referentiel[i] for i in top_idx]
+model = SentenceTransformer("all-MiniLM-L6-v2")
 
-    pairs = [[name, candidate] for candidate in candidates]
-    ce_scores = cross_encoder.predict(pairs)
-    best_idx = np.argmax(ce_scores)
-    best = candidates[best_idx]
-    confidence = sigmoid(ce_scores[best_idx])
+# encoder tous les alias
+all_aliases = df["clean_input"].tolist()
+alias_embeddings = model.encode(all_aliases)
 
-    return {"input": name, "canonical": best, "score": float(confidence), "method": "ai"}
+df["embedding"] = list(alias_embeddings)
 
-# ------------------------
-# 8️⃣ Exemple de dataset pour fine-tuning CrossEncoder
-# ------------------------
-train_examples = [
-    InputExample(texts=["ecole d'ingénieur X", "École Polytechnique"], label=1.0),
-    InputExample(texts=["La prestigieuse école X", "École Polytechnique"], label=1.0),
-    InputExample(texts=["juif", "École Polytechnique"], label=1.0),
-    InputExample(texts=["l'école polytechnique", "École Polytechnique"], label=1.0),
-    InputExample(texts=["Paris 13", "Sorbonne Paris Nord"], label=1.0),
-    InputExample(texts=["dauphine", "Université Paris Dauphine"], label=1.0),
-    InputExample(texts=["ecole d'ingénieur X", "Sorbonne Paris Nord"], label=0.0),
-    InputExample(texts=["Paris 13", "École Polytechnique"], label=0.0),
-]
 
-train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=4)
-train_loss = losses.CosineSimilarityLoss(cross_encoder)
+label_centroids = {}
 
-# ------------------------
-# 9️⃣ Fine-tuning (CrossEncoder)
-# ------------------------
-# Pour un vrai entraînement, utilisez model.fit avec un optimiseur et plusieurs epochs
-# Exemple rapide pour montrer le pipeline
-# cross_encoder.fit(train_dataloader=train_dataloader, epochs=2, warmup_steps=10)
+for label, group in df.groupby("clean_label"):
+    embeddings = np.stack(group["embedding"].values)
+    centroid = embeddings.mean(axis=0)
+    
+    label_centroids[label] = centroid
 
-# ------------------------
-# 10️⃣ Tests
-# ------------------------
-tests = [
-    "Paris 13",
-    "l'X",
-    "polytechnique",
-    "HEC",
-    "Dauphine",
-    "Pantheon Assas",
-    "université daufine",
-    "univeresité pariss 13",
-    "paris saclay",
-    "ecole d'ingénieur X",
-    "La prestigieuse école polytechnique"
-]
 
-for t in tests:
-    print(normalize(t))
+def get_top_k_labels(input_text, k=5):
+    input_emb = model.encode([input_text])[0]
+    
+    scores = []
+    
+    for label, centroid in label_centroids.items():
+        sim = cosine_similarity([input_emb], [centroid])[0][0]
+        scores.append((label, sim))
+    
+    scores.sort(key=lambda x: x[1], reverse=True)
+    
+    return [s[0] for s in scores[:k]]
+
+
+def refine_with_aliases(input_text, candidates):
+    best_label = None
+    best_score = -1
+    
+    for label in candidates:
+        aliases = label_groups[label]
+        
+        for alias in aliases:
+            score = fuzz.token_sort_ratio(input_text, alias) / 100
+            
+            if score > best_score:
+                best_score = score
+                best_label = label
+    
+    return best_label, best_score
+
+def predict(input_text):
+    clean_text = normalize(input_text)
+    
+    # étape 1 : shortlist
+    candidates = get_top_k_labels(clean_text, k=5)
+    
+    # étape 2 : matching fin
+    label, score = refine_with_aliases(clean_text, candidates)
+    
+    return label, score
+
+preds = []
+
+for text in df["user_input"]:
+    label, score = predict(text)
+    preds.append((label, score))
+
+df["predicted_label"] = [p[0] for p in preds]
+df["score"] = [p[1] for p in preds]
+
+def decision(score):
+    if score > 0.85:
+        return "auto_accept"
+    elif score > 0.6:
+        return "review"
+    else:
+        return "reject"
+
+df["decision"] = df["score"].apply(decision)
+
+
+def detect_bad_labels(threshold=0.5):
+    bad = []
+    
+    for label, aliases in label_groups.items():
+        if len(aliases) < 2:
+            continue
+        
+        emb = model.encode(aliases)
+        sim = cosine_similarity(emb)
+        
+        avg = sim.mean()
+        
+        if avg < threshold:
+            bad.append((label, avg))
+    
+    return bad
+
+bad_labels = detect_bad_labels()
+print(bad_labels)
