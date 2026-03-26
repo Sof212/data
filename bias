@@ -504,3 +504,104 @@ Je peux te faire :
 * ✔ un **dataset de prompts optimisé genre + âge**
 
 Dis-moi 👍
+
+
+
+
+
+
+
+# =========================================
+# IMPORTS
+# =========================================
+from sentence_transformers import CrossEncoder
+import unicodedata
+import re
+import numpy as np
+
+# =========================================
+# DICTIONNAIRE DES LABELS / ALIAS
+# =========================================
+dico = {
+    "École Polytechnique": ["x", "polytech", "ecole polytechnique", "polytechnique"],
+    "HEC Paris": ["hec", "hec paris"],
+    "Sorbonne Paris Nord": ["paris 13", "universite paris 13", "paris13"]
+}
+
+# =========================================
+# NETTOYAGE TEXTE
+# =========================================
+def clean(text):
+    text = text.lower()
+    text = unicodedata.normalize('NFD', text)
+    text = ''.join(c for c in text if unicodedata.category(c) != 'Mn')
+    text = re.sub(r'[^a-z0-9 ]', '', text)
+    return text.strip()
+
+# =========================================
+# FLATTEN ALIAS POUR LE CROSS-ENCODER
+# =========================================
+alias_to_label = []
+for label, aliases in dico.items():
+    for alias in aliases:
+        alias_to_label.append((clean(alias), label))
+
+# Liste des alias propre
+alias_list = [a for a, _ in alias_to_label]
+
+# =========================================
+# CHARGEMENT DU CROSS-ENCODER
+# =========================================
+model = CrossEncoder("antoinelouis/crossencoder-camembert-base-msmarcoFR", num_labels=1)
+
+# =========================================
+# FONCTION DE NORMALISATION OPTIMISÉE
+# =========================================
+def normalize(query, batch_size=32, threshold=0.2):
+    """
+    Input:
+        query: str, texte entré par l'utilisateur
+        batch_size: int, pour scorer en batch (optimisation GPU/CPU)
+        threshold: float, score minimal pour accepter
+    Output:
+        label canonique + alias + score
+    """
+    query_clean = clean(query)
+    
+    # Crée toutes les paires query vs alias
+    pairs = [(query_clean, alias) for alias in alias_list]
+    
+    # Batch scoring
+    scores = []
+    for i in range(0, len(pairs), batch_size):
+        batch = pairs[i:i+batch_size]
+        batch_scores = model.predict(batch)
+        scores.extend(batch_scores)
+    
+    scores = np.array(scores)
+    best_idx = np.argmax(scores)
+    best_score = scores[best_idx]
+    
+    # Récupère alias et label
+    best_alias, best_label = alias_to_label[best_idx]
+    
+    # Vérifie seuil minimal
+    if best_score < threshold:
+        return "UNKNOWN", None, best_score
+    return best_label, best_alias, best_score
+
+# =========================================
+# TEST DU PIPELINE
+# =========================================
+queries = [
+    "polytech",
+    "X",
+    "paris 13",
+    "hec paris",
+    "universite paris13",
+    "telecom paris"  # inconnu
+]
+
+for q in queries:
+    label, alias, score = normalize(q)
+    print(f"Query: {q} -> Label: {label}, Alias: {alias}, Score: {score:.3f}")
