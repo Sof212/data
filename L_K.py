@@ -1,82 +1,144 @@
 import numpy as np
-import cv2
+from sentence_transformers import SentenceTransformer, util
 
-cap = cv2.VideoCapture('/Users/sofianeagounikaci/Downloads/traffic.mp4')
+# =========================
+# 🔥 MODEL
+# =========================
 
-# params for ShiTomasi corner detection
-feature_params = dict(maxCorners = 300, 
-                     qualityLevel = 0.15, 
-                     minDistance = 5, 
-                     blockSize = 3)
+model = SentenceTransformer("sentence-transformers/LaBSE")
 
-# Parameters for lucas kanade optical flow
-lk_params = dict(winSize = (15,15),
-                maxLevel = 2,
-                criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+# =========================
+# 🔥 NORMALISATION
+# =========================
 
-# Create some random colors
-color = np.random.randint(0, 255, (100, 3))
+def normalize(text):
+    return text.lower().strip()
 
-# Take first frame and find corners in it
-ret, old_frame = cap.read()
+# =========================
+# 🔥 EMBEDDING
+# =========================
 
-if not ret:
-    print("Erreur: Impossible de lire la vidéo")
-    cap.release()
-    exit()
+def encode(texts):
+    return model.encode(texts)
 
-old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
-p0 = cv2.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
+# =========================
+# 🔥 SIMILARITY
+# =========================
 
-# Create a mask image for drawing purposes
-mask = np.zeros_like(old_frame)
+def similarity(a, b):
+    return util.cos_sim(a, b).item()
 
-while(True):
-    ret, frame = cap.read()
+# =========================
+# 🔥 CENTROID
+# =========================
+
+def compute_centroid(aliases):
+    emb = encode(aliases)
+    return np.mean(emb, axis=0)
+
+# =========================
+# 🔥 PIPELINE CLEAN
+# =========================
+
+def clean_dictionary(data, threshold_in=0.55, margin=0.05):
     
-    # Vérifier si la frame a été lue correctement
-    if not ret:
-        print("Fin de la vidéo ou erreur de lecture")
-        break
+    """
+    threshold_in : minimum similarity avec son cluster
+    margin : différence minimale avec les autres clusters
+    """
     
-    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # 🔥 préparation
+    clusters = {}
     
-    # calculate optical flow
-    p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, frame_gray, p0, None, **lk_params)
+    for k, values in data.items():
+        clusters[k] = [normalize(v) for v in values]
     
-    # Vérifier si le flux optique a réussi
-    if p1 is not None:
-        # Select good points
-        good_new = p1[st==1]
-        good_old = p0[st==1]
+    # 🔥 centroids
+    centroids = {}
+    
+    for k, aliases in clusters.items():
+        if len(aliases) > 0:
+            centroids[k] = compute_centroid(aliases)
+    
+    result = {}
+    
+    for key, aliases in clusters.items():
         
-        # draw the tracks
-        for i, (new, old) in enumerate(zip(good_new, good_old)):
-            # Convertir en entiers
-            a, b = int(new[0]), int(new[1])
-            c, d = int(old[0]), int(old[1])
+        cleaned = []
+        
+        for alias in aliases:
             
-            # Dessiner la ligne de trajectoire
-            mask = cv2.line(mask, (a, b), (c, d), color[i].tolist(), 2)
-            # Dessiner le point actuel
-            frame = cv2.circle(frame, (a, b), 5, color[i].tolist(), -1)
+            emb = model.encode([alias])[0]
+            
+            # 🔥 similarité avec son cluster
+            own_centroid = centroids.get(key)
+            
+            if own_centroid is None:
+                continue
+            
+            sim_own = similarity([emb], [own_centroid])
+            
+            # ❌ trop faible → suppression
+            if sim_own < threshold_in:
+                continue
+            
+            # 🔥 comparaison avec autres clusters
+            better_cluster = False
+            
+            for other_key, other_centroid in centroids.items():
+                
+                if other_key == key:
+                    continue
+                
+                sim_other = similarity([emb], [other_centroid])
+                
+                if sim_other > sim_own + margin:
+                    better_cluster = True
+                    break
+            
+            # ❌ appartient clairement à un autre cluster
+            if better_cluster:
+                continue
+            
+            cleaned.append(alias)
         
-        img = cv2.add(frame, mask)
-        cv2.imshow('Optical Flow', img)
-        
-        k = cv2.waitKey(30) & 0xff
-        if k == 27:  # ESC pour quitter
-            break
-        
-        # Now update the previous frame and previous points
-        old_gray = frame_gray.copy()
-        p0 = good_new.reshape(-1, 1, 2)
-    else:
-        print("Flux optique perdu, recherche de nouveaux points...")
-        # Réinitialiser les points si le flux optique échoue
-        p0 = cv2.goodFeaturesToTrack(frame_gray, mask = None, **feature_params)
-        mask = np.zeros_like(frame)
-        old_gray = frame_gray.copy()
+        result[key] = cleaned
+    
+    return result
 
-cv2.destroyAllWindows()
-cap.release()
+# =========================
+# 🔥 EXEMPLE
+# =========================
+
+if __name__ == "__main__":
+    
+    data = {
+        "hec_paris": [
+            "hec",
+            "haut etudes commerciales"
+        ],
+        "ecole_polytechnique": [
+            "x",
+            "l'x",
+            "polytechnique",
+            "ecole_polytechnique",
+            "paris cite"  # ❌ doit être supprimé
+        ],
+        "universite paris cite": [
+            "universite paris cite",
+            "paris descartes",
+            "es banque"
+        ],
+    "es banque": [
+            "es banque Paris",
+
+        ],
+  
+    }
+
+    result = clean_dictionary(data)
+
+    for key, values in result.items():
+        print(f"\n📚 {key}")
+        for v in values:
+            print("  -", v)
