@@ -1,169 +1,123 @@
-import pandas as pd
 import numpy as np
-import re
-from unidecode import unidecode
-from rapidfuzz import fuzz
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
+import torch
+from rank_bm25 import BM25Okapi
+from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification
 
-def normalize(text):
-    text = str(text).lower()
-    text = unidecode(text)
+# ─────────────────────────────────────────────
+# CONFIG (download auto depuis Hugging Face)
+# ─────────────────────────────────────────────
 
-    # enlever ponctuation
-    text = re.sub(r"[^\w\s]", " ", text)
+BI_ENCODER_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+CROSS_ENCODER_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
-    # mots inutiles
-    stopwords = {
-        "universite", "university", "univ",
-        "ecole", "school", "college",
-        "lycee", "institut"
-    }
+DEVICE = "cpu"
+torch.set_num_threads(4)
 
-    tokens = text.split()
-    tokens = [t for t in tokens if t not in stopwords]
+# ─────────────────────────────────────────────
+# 1. BM25
+# ─────────────────────────────────────────────
 
-    return " ".join(tokens)
+class BM25Retriever:
+    def __init__(self, corpus):
+        self.corpus = corpus
+        self.tokenized = [doc.lower().split() for doc in corpus]
+        self.bm25 = BM25Okapi(self.tokenized)
 
-df = pd.read_csv("data.csv")
-
-# colonnes attendues :
-# user_input | annotated_label
-
-df["clean_input"] = df["user_input"].apply(normalize)
-df["clean_label"] = df["annotated_label"].apply(normalize)
+    def search(self, query, top_k=20):
+        scores = self.bm25.get_scores(query.lower().split())
+        idx = np.argsort(scores)[::-1][:top_k]
+        return [(self.corpus[i], scores[i]) for i in idx]
 
 
-label_groups = (
-    df.groupby("clean_label")["clean_input"]
-    .apply(list)
-    .to_dict()
-)
+# ─────────────────────────────────────────────
+# 2. BI-ENCODER
+# ─────────────────────────────────────────────
+
+class BiEncoder:
+    def __init__(self, model_name):
+        print(f"⏳ Loading bi-encoder: {model_name}")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name).to(DEVICE)
+        self.model.eval()
+
+    def encode(self, texts):
+        inputs = self.tokenizer(
+            texts,
+            padding=True,
+            truncation=True,
+            max_length=128,
+            return_tensors="pt"
+        ).to(DEVICE)
+
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+
+        embeddings = outputs.last_hidden_state.mean(dim=1)
+        return embeddings.cpu().numpy()
 
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+# ─────────────────────────────────────────────
+# 3. CROSS-ENCODER
+# ─────────────────────────────────────────────
 
-# encoder tous les alias
-all_aliases = df["clean_input"].tolist()
-alias_embeddings = model.encode(all_aliases)
+class CrossEncoder:
+    def __init__(self, model_name):
+        print(f"⏳ Loading cross-encoder: {model_name}")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name).to(DEVICE)
+        self.model.eval()
 
-df["embedding"] = list(alias_embeddings)
+    def score(self, query, docs):
+        inputs = self.tokenizer(
+            [query] * len(docs),
+            docs,
+            padding=True,
+            truncation=True,
+            max_length=128,
+            return_tensors="pt"
+        ).to(DEVICE)
 
+        with torch.no_grad():
+            logits = self.model(**inputs).logits
 
-label_centroids = {}
-
-for label, group in df.groupby("clean_label"):
-    embeddings = np.stack(group["embedding"].values)
-    centroid = embeddings.mean(axis=0)
-    
-    label_centroids[label] = centroid
-
-
-def get_top_k_labels(input_text, k=5):
-    input_emb = model.encode([input_text])[0]
-    
-    scores = []
-    
-    for label, centroid in label_centroids.items():
-        sim = cosine_similarity([input_emb], [centroid])[0][0]
-        scores.append((label, sim))
-    
-    scores.sort(key=lambda x: x[1], reverse=True)
-    
-    return [s[0] for s in scores[:k]]
+        return logits.squeeze().cpu().numpy()
 
 
-def refine_with_aliases(input_text, candidates):
-    best_label = None
-    best_score = -1
-    
-    for label in candidates:
-        aliases = label_groups[label]
-        
-        for alias in aliases:
-            score = fuzz.token_sort_ratio(input_text, alias) / 100
-            
-            if score > best_score:
-                best_score = score
-                best_label = label
-    
-    return best_label, best_score
+# ─────────────────────────────────────────────
+# 4. PIPELINE COMPLET
+# ─────────────────────────────────────────────
 
-def predict(input_text):
-    clean_text = normalize(input_text)
-    
-    # étape 1 : shortlist
-    candidates = get_top_k_labels(clean_text, k=5)
-    
-    # étape 2 : matching fin
-    label, score = refine_with_aliases(clean_text, candidates)
-    
-    return label, score
+class HybridSearch:
+    def __init__(self, corpus):
+        self.corpus = corpus
 
-preds = []
+        print("🔹 BM25 init...")
+        self.bm25 = BM25Retriever(corpus)
 
-for text in df["user_input"]:
-    label, score = predict(text)
-    preds.append((label, score))
+        print("🔹 Loading models...")
+        self.bi = BiEncoder(BI_ENCODER_NAME)
+        self.cross = CrossEncoder(CROSS_ENCODER_NAME)
 
-df["predicted_label"] = [p[0] for p in preds]
-df["score"] = [p[1] for p in preds]
+        print("🔹 Encoding corpus...")
+        self.doc_embeddings = self.bi.encode(corpus)
 
-def decision(score):
-    if score > 0.85:
-        return "auto_accept"
-    elif score > 0.6:
-        return "review"
-    else:
-        return "reject"
+    def search(self, query, top_k=5):
+        # 1. BM25
+        bm25_results = self.bm25.search(query, top_k=30)
+        docs = [d for d, _ in bm25_results]
 
-df["decision"] = df["score"].apply(decision)
+        # 2. Bi-encoder
+        q_emb = self.bi.encode([query])[0]
+        doc_embs = self.bi.encode(docs)
+
+        sims = np.dot(doc_embs, q_emb)
+        top_idx = np.argsort(sims)[::-1][:15]
+        docs = [docs[i] for i in top_idx]
+
+        # 3. Cross-encoder
+        scores = self.cross.score(query, docs)
+        final_idx = np.argsort(scores)[::-1][:top_k]
+
+        return [(docs[i], float(scores[i])) for i in final_idx]
 
 
-def detect_bad_labels(threshold=0.5):
-    bad = []
-    
-    for label, aliases in label_groups.items():
-        if len(aliases) < 2:
-            continue
-        
-        emb = model.encode(aliases)
-        sim = cosine_similarity(emb)
-        
-        avg = sim.mean()
-        
-        if avg < threshold:
-            bad.append((label, avg))
-    
-    return bad
-
-bad_labels = detect_bad_labels()
-print(bad_labels)
-
-
-
-
-import re
-
-def concat_word_number(text):
-    """
-    Concatène les mots suivis directement par un chiffre dans une chaîne de caractères.
-    Exemple : "Paris 1" -> "Paris1"
-    """
-    if not isinstance(text, str):
-        return ""
-    
-    # Remplacer "mot espace chiffre" par "motchiffre"
-    text = re.sub(r'(\b\w+)\s+(\d+)\b', r'\1\2', text)
-    return text.strip()
-
-# Tests
-examples = [
-    "Paris 1",
-    "Université Paris 1",
-    "Paris",
-    "Fac Lyon 2"
-]
-
-for e in examples:
-    print(e, "->", concat_word_number(e))
