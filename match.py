@@ -121,3 +121,27 @@ class HybridSearch:
         return [(docs[i], float(scores[i])) for i in final_idx]
 
 
+
+
+# ─────────────────────────────────────────────
+# 5. DEMO
+# ─────────────────────────────────────────────
+
+if __name__ == "__main__":
+    CORPUS = [
+        "universite sorbonne paris nord: , es banque, hey, Paris 13",
+        "universite paris 8",
+        "Les transformers révolutionnent le NLP.",
+        "Le football est un sport populaire.",
+        "Les chats sont des félins.",
+    ]
+
+    engine = HybridSearch(CORPUS)
+
+    query = "universite Paris 13"
+    results = engine.search(query)
+
+    print("\n🔍 Résultats :")
+    for doc, score in results:
+        print(f"{score:.4f} → {doc}")
+
