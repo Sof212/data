@@ -792,5 +792,30 @@ Même si certains parseurs utilisent du ML aujourd’hui, l’approche reste cen
 * LLM embeddings
 * WEAT
 
+
+
+Bonjour [Nom de votre responsable],
+
+Suite à notre réunion, voici un récapitulatif des points abordés :
+
+* Retour sur le cadrage du sujet portant sur la détection des biais liés au genre et à l’âge dans les modèles et données textuelles, ainsi que sur les travaux réalisés jusqu’à présent concernant l’état de l’art.
+
+* Présentation des différentes méthodes et métriques à mettre en œuvre dans le cadre de ces travaux.
+
+* Discussion autour de l’affinage et de la sélection des métriques les plus pertinentes parmi l’ensemble des 26 métriques identifiées.
+
+* Préparation d’un document à rendre pour le 26 mai. Celui-ci devra inclure le découpage des tâches et sous-tâches à réaliser, les livrables attendus, ainsi que l’organisation des différents sprints jusqu’à mi-août.
+
+* Point de suivi concernant la mission de classification des écoles :
+
+  * Mise à disposition des données B Welcome avec le nouveau format prévue pour vendredi.
+  * Début de l’annotation à grande échelle des données par l’équipe métier depuis hier.
+
+N’hésitez pas à me faire part de tout complément ou modification à apporter.
+
+Bien cordialement,
+
+Sofiane Agouni Kaci
+
 Car ils reposent tous sur un apprentissage de représentation.
 
