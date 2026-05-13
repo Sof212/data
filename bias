@@ -605,3 +605,192 @@ queries = [
 for q in queries:
     label, alias, score = normalize(q)
     print(f"Query: {q} -> Label: {label}, Alias: {alias}, Score: {score:.3f}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Tu as raison.
+Si ton objectif est de détecter les biais **uniquement dans les données textuelles** et **sans utiliser de modèle**, alors les méthodes basées sur les embeddings (Word2Vec, GloVe, BERT, etc.) ne sont pas totalement “pures”, car :
+
+* elles apprennent une représentation statistique via un modèle,
+* et le biais détecté peut venir du modèle autant que du corpus.
+
+Donc, si on exclut toute approche “model-based”, alors les meilleures méthodes deviennent plutôt :
+
+---
+
+# 1. Analyse de cooccurrences lexicales
+
+## Idée
+
+Mesurer quels mots apparaissent fréquemment avec :
+
+* hommes,
+* femmes,
+* pronoms genrés.
+
+---
+
+## Exemple
+
+Dans un corpus :
+
+* “leader”, “scientifique” proches de “homme”
+* “douce”, “mère” proches de “femme”
+
+→ biais de genre.
+
+---
+
+## Métriques classiques
+
+### Fréquence conditionnelle
+
+P(mot\mid genre)=\frac{freq(mot,genre)}{freq(genre)}
+
+---
+
+### PMI
+
+PMI(x,y)=\log\frac{P(x,y)}{P(x)P(y)}
+
+---
+
+## Ce que ça détecte
+
+* associations stéréotypées,
+* métiers genrés,
+* adjectifs biaisés,
+* rôles sociaux.
+
+---
+
+# 2. Analyse statistique des représentations
+
+## Idée
+
+Mesurer quantitativement :
+
+* combien de femmes/hommes sont mentionnés,
+* quels rôles ils occupent,
+* quelles actions leur sont associées.
+
+---
+
+## Exemples
+
+### Déséquilibre de représentation
+
+* 85 % des personnages sont masculins.
+
+### Déséquilibre professionnel
+
+* femmes → soins
+* hommes → technique/direction
+
+---
+
+## Mesures utilisées
+
+### Ratio de représentation
+
+Ratio_{femmes}=\frac{Nombre\ de\ mentions\ féminines}{Nombre\ total\ de\ mentions}
+
+---
+
+### Tests statistiques
+
+* chi-square,
+* tests d’indépendance,
+* divergence KL,
+* entropy.
+
+---
+
+## Très utilisé dans
+
+* audit de datasets,
+* analyse de médias,
+* linguistique computationnelle,
+* fairness NLP.
+
+---
+
+# 3. Analyse syntaxique et grammaticale
+
+## Idée
+
+Analyser :
+
+* sujets,
+* verbes,
+* adjectifs,
+* relations grammaticales.
+
+Sans modèle d’IA génératif ou embedding.
+
+---
+
+## Exemple
+
+On regarde :
+
+### Qui fait l’action ?
+
+* “L’homme dirige”
+* “La femme aide”
+
+### Quels adjectifs sont attribués ?
+
+* femmes → “émotive”
+* hommes → “rationnel”
+
+---
+
+## Techniques utilisées
+
+* POS tagging,
+* dependency parsing,
+* extraction sujet-verbe-objet.
+
+Même si certains parseurs utilisent du ML aujourd’hui, l’approche reste centrée sur la structure linguistique du corpus et non sur un modèle sémantique appris comme les embeddings.
+
+---
+
+# Les 3 meilleures méthodes “sans modèle”
+
+| Méthode                   | Type                      |
+| ------------------------- | ------------------------- |
+| Cooccurrences lexicales   | statistique lexicale      |
+| Analyse de représentation | statistique globale       |
+| Analyse syntaxique        | linguistique structurelle |
+
+---
+
+# Ce qu’il faut éviter si tu veux du “pur corpus analysis”
+
+À exclure :
+
+* Word2Vec
+* GloVe
+* FastText
+* BERT
+* SBERT
+* LLM embeddings
+* WEAT
+
+Car ils reposent tous sur un apprentissage de représentation.
+
