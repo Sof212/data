@@ -1,0 +1,1210 @@
+Voici une explication détaillée des **10 métriques de détection de biais pour modèles génératifs** listées dans ton tableau : CEAT, Sentence Bias Score, SEAT, All Unmasked Likelihood, LPBS, Categorical Bias Score, HONEST, Psycholinguistic Norms, Gender Polarity et Co-Occurrence Bias Score. Le tableau les classe en trois familles : **embedding-based**, **probability-based** et **generated-based**. 
+
+---
+
+# 1. CEAT — Contextualized Embedding Association Test
+
+## Idée générale
+
+CEAT signifie **Contextualized Embedding Association Test**.
+
+C’est une métrique basée sur les **embeddings contextualisés**, par exemple ceux produits par BERT, RoBERTa ou DeBERTa.
+
+Contrairement aux anciens embeddings comme Word2Vec ou GloVe, où un mot possède un seul vecteur fixe, CEAT prend en compte le **contexte**.
+
+Par exemple, le mot **“nurse”** peut apparaître dans :
+
+> “The nurse helped the patient.”
+
+ou :
+
+> “The nurse became the hospital director.”
+
+Dans chaque phrase, le modèle peut produire un embedding légèrement différent pour le mot “nurse”.
+
+CEAT mesure si certains groupes de mots sont plus proches de certains attributs.
+
+Exemple classique :
+
+Groupes cibles :
+
+[
+X = {\text{man, male, boy}}
+]
+
+[
+Y = {\text{woman, female, girl}}
+]
+
+Attributs :
+
+[
+A = {\text{career, salary, office}}
+]
+
+[
+B = {\text{family, home, children}}
+]
+
+La question est :
+
+> Est-ce que le modèle associe davantage les hommes à la carrière et les femmes à la famille ?
+
+---
+
+## Formule principale
+
+On mesure l’association d’un mot cible (w) avec deux groupes d’attributs (A) et (B) :
+
+[
+s(w, A, B) =
+\frac{1}{|A|}\sum_{a \in A} \cos(w,a)
+-------------------------------------
+
+\frac{1}{|B|}\sum_{b \in B} \cos(w,b)
+]
+
+où (\cos(w,a)) est la similarité cosinus entre les embeddings.
+
+Ensuite, on compare les groupes (X) et (Y) :
+
+[
+S(X,Y,A,B)
+==========
+
+## \sum_{x \in X}s(x,A,B)
+
+\sum_{y \in Y}s(y,A,B)
+]
+
+Si le score est positif, cela signifie que (X) est plus associé à (A) que (Y).
+
+---
+
+## Exemple numérique
+
+Supposons :
+
+[
+s(\text{man}, A, B)=0.25
+]
+
+[
+s(\text{male}, A, B)=0.20
+]
+
+[
+s(\text{woman}, A, B)=0.05
+]
+
+[
+s(\text{female}, A, B)=0.02
+]
+
+Alors :
+
+[
+S = (0.25 + 0.20) - (0.05 + 0.02)
+]
+
+[
+S = 0.45 - 0.07 = 0.38
+]
+
+Un score de (0.38) indique que le modèle associe davantage les termes masculins aux attributs de carrière qu’aux attributs familiaux, par rapport aux termes féminins.
+
+---
+
+## Pourquoi CEAT est utile
+
+CEAT est puissant parce qu’il ne regarde pas seulement un mot isolé. Il regarde le mot dans plusieurs phrases différentes.
+
+Par exemple :
+
+> “He is a doctor.”
+
+> “She is a doctor.”
+
+> “The doctor entered the room.”
+
+La représentation du mot “doctor” peut changer selon le contexte. CEAT capture cette variabilité.
+
+C’est pour cela que ton tableau indique que CEAT est une métrique **haute priorité** : elle est très pertinente pour les modèles modernes contextualisés.
+
+---
+
+# 2. Sentence Bias Score
+
+## Idée générale
+
+Le **Sentence Bias Score** mesure le biais au niveau d’une phrase complète.
+
+L’idée est de comparer une phrase contenant un terme sensible à une phrase équivalente avec un autre terme sensible.
+
+Exemple :
+
+[
+S_1 = \text{“He is a brilliant engineer.”}
+]
+
+[
+S_2 = \text{“She is a brilliant engineer.”}
+]
+
+Si le modèle donne un score plus favorable à (S_1) qu’à (S_2), cela peut indiquer un biais de genre.
+
+---
+
+## Principe mathématique
+
+On calcule un embedding pour chaque phrase :
+
+[
+v(S_1), \quad v(S_2)
+]
+
+Puis on compare ces embeddings avec un attribut donné, par exemple “competent”, “career”, “science”.
+
+[
+Bias(S) = \cos(v(S), v(A))
+]
+
+où (A) est un attribut.
+
+On peut ensuite calculer :
+
+[
+BiasScore = Bias(S_1) - Bias(S_2)
+]
+
+---
+
+## Exemple numérique
+
+Supposons :
+
+[
+\cos(v(\text{“He is an engineer”}), v(\text{career})) = 0.72
+]
+
+[
+\cos(v(\text{“She is an engineer”}), v(\text{career})) = 0.58
+]
+
+Alors :
+
+[
+BiasScore = 0.72 - 0.58 = 0.14
+]
+
+Cela signifie que la phrase masculine est plus fortement associée à l’idée de carrière que la phrase féminine.
+
+---
+
+## Utilité
+
+Cette métrique est très utile pour localiser les mots ou expressions qui influencent le biais.
+
+Par exemple :
+
+> “She is emotional.”
+
+> “He is rational.”
+
+On peut voir si certains adjectifs apparaissent plus naturellement avec certains groupes.
+
+---
+
+# 3. SEAT — Sentence Encoder Association Test
+
+## Idée générale
+
+SEAT est l’équivalent de WEAT, mais appliqué aux **phrases**.
+
+WEAT fonctionne sur des mots. SEAT fonctionne sur des phrases encodées par des modèles comme BERT, RoBERTa, Sentence-BERT, Universal Sentence Encoder, etc.
+
+Exemple :
+
+Groupes cibles :
+
+[
+X = {\text{“This is a man.”}, \text{“He is here.”}}
+]
+
+[
+Y = {\text{“This is a woman.”}, \text{“She is here.”}}
+]
+
+Attributs :
+
+[
+A = {\text{“This person has a career.”}}
+]
+
+[
+B = {\text{“This person has a family.”}}
+]
+
+---
+
+## Formule
+
+La formule est très proche de CEAT :
+
+[
+s(x,A,B)
+========
+
+## \frac{1}{|A|}\sum_{a \in A}\cos(x,a)
+
+\frac{1}{|B|}\sum_{b \in B}\cos(x,b)
+]
+
+Puis :
+
+[
+S(X,Y,A,B)
+==========
+
+## \sum_{x \in X}s(x,A,B)
+
+\sum_{y \in Y}s(y,A,B)
+]
+
+---
+
+## Exemple
+
+Supposons :
+
+[
+s(\text{“He is here”}, A, B)=0.18
+]
+
+[
+s(\text{“The man is here”}, A, B)=0.22
+]
+
+[
+s(\text{“She is here”}, A, B)=0.04
+]
+
+[
+s(\text{“The woman is here”}, A, B)=0.01
+]
+
+Alors :
+
+[
+S = (0.18 + 0.22) - (0.04 + 0.01)
+]
+
+[
+S = 0.40 - 0.05 = 0.35
+]
+
+Le modèle associe davantage les phrases masculines aux attributs (A).
+
+---
+
+## Différence avec CEAT
+
+SEAT utilise souvent des **templates fixes**, comme :
+
+> “This is [word].”
+
+CEAT utilise davantage des contextes variés et contextualisés.
+
+Donc :
+
+* SEAT = bonne baseline canonique.
+* CEAT = plus riche, car plus sensible au contexte.
+
+---
+
+# 4. All Unmasked Likelihood — AUL
+
+## Idée générale
+
+AUL signifie **All Unmasked Likelihood**.
+
+C’est une métrique basée sur les **probabilités token-level**.
+
+Elle est surtout utilisée avec les modèles de type **Masked Language Model**, comme BERT.
+
+L’idée est de mesurer la probabilité qu’un modèle attribue à toute une phrase, sans masquer uniquement un seul mot.
+
+Exemple :
+
+[
+S_1 = \text{“The doctor said that he was ready.”}
+]
+
+[
+S_2 = \text{“The doctor said that she was ready.”}
+]
+
+Si le modèle donne une probabilité plus élevée à (S_1), cela peut révéler une association entre “doctor” et “he”.
+
+---
+
+## Formule
+
+Pour une phrase composée de tokens :
+
+[
+S = (t_1,t_2,\dots,t_n)
+]
+
+AUL calcule :
+
+[
+AUL(S) = \frac{1}{n}\sum_{i=1}^{n}\log P(t_i \mid S)
+]
+
+Ici, on calcule la probabilité de chaque token dans son contexte complet.
+
+---
+
+## Exemple numérique
+
+Phrase 1 :
+
+> “The doctor said he was ready.”
+
+Supposons :
+
+[
+\log P(t_1) = -0.2
+]
+
+[
+\log P(t_2) = -0.4
+]
+
+[
+\log P(t_3) = -0.3
+]
+
+[
+\log P(t_4) = -0.1
+]
+
+[
+\log P(t_5) = -0.3
+]
+
+Total :
+
+[
+AUL(S_1)=\frac{-0.2-0.4-0.3-0.1-0.3}{5}
+]
+
+[
+AUL(S_1)=\frac{-1.3}{5}=-0.26
+]
+
+Phrase 2 :
+
+> “The doctor said she was ready.”
+
+Supposons :
+
+[
+AUL(S_2)=-0.42
+]
+
+Comme :
+
+[
+-0.26 > -0.42
+]
+
+le modèle préfère la phrase avec “he”.
+
+---
+
+## Interprétation
+
+Plus le score AUL est élevé, plus la phrase est jugée probable par le modèle.
+
+Un biais peut être mesuré par :
+
+[
+Bias = AUL(S_1) - AUL(S_2)
+]
+
+Dans notre exemple :
+
+[
+Bias = -0.26 - (-0.42)=0.16
+]
+
+Donc le modèle favorise (S_1).
+
+---
+
+# 5. Log-Probability Bias Score — LPBS
+
+## Idée générale
+
+LPBS signifie **Log-Probability Bias Score**.
+
+Cette métrique mesure le biais à partir des **log-probabilités** produites par un modèle.
+
+Elle est souvent utilisée avec des phrases à trou :
+
+> “The [MASK] is a nurse.”
+
+On compare la probabilité que le modèle mette “woman” ou “man”.
+
+---
+
+## Formule simple
+
+Pour un groupe cible (g) et un attribut (a), on peut calculer :
+
+[
+LPBS(g,a) = \log P(a \mid g) - \log P(a)
+]
+
+La deuxième partie (\log P(a)) sert de normalisation par la probabilité générale de l’attribut.
+
+---
+
+## Exemple
+
+Phrase :
+
+> “The [MASK] is a nurse.”
+
+On veut comparer :
+
+[
+P(\text{woman} \mid \text{nurse})
+]
+
+et
+
+[
+P(\text{man} \mid \text{nurse})
+]
+
+Supposons :
+
+[
+P(\text{woman} \mid \text{nurse}) = 0.60
+]
+
+[
+P(\text{man} \mid \text{nurse}) = 0.20
+]
+
+Sans normalisation, on dirait que le modèle associe fortement “nurse” à “woman”.
+
+Mais supposons aussi :
+
+[
+P(\text{woman}) = 0.40
+]
+
+[
+P(\text{man}) = 0.40
+]
+
+Alors :
+
+[
+LPBS(\text{woman}, \text{nurse})
+================================
+
+\log(0.60)-\log(0.40)
+]
+
+[
+= \log\left(\frac{0.60}{0.40}\right)
+====================================
+
+\log(1.5)
+\approx 0.405
+]
+
+Pour “man” :
+
+[
+LPBS(\text{man}, \text{nurse})
+==============================
+
+\log(0.20)-\log(0.40)
+]
+
+# [
+
+\log(0.5)
+\approx -0.693
+]
+
+Donc le biais relatif est :
+
+[
+0.405 - (-0.693)=1.098
+]
+
+Le modèle associe beaucoup plus “nurse” à “woman” qu’à “man”.
+
+---
+
+## Pourquoi LPBS est interprétable
+
+LPBS est intéressant parce qu’il ne regarde pas seulement la probabilité brute.
+
+Il corrige par la probabilité générale du mot.
+
+Par exemple, si le mot “woman” est très fréquent dans le corpus, la normalisation évite d’interpréter cette fréquence générale comme un biais spécifique.
+
+---
+
+# 6. Categorical Bias Score
+
+## Idée générale
+
+Le **Categorical Bias Score** est une extension de LPBS à plusieurs catégories.
+
+Au lieu de comparer seulement deux groupes, par exemple hommes/femmes, on peut comparer plusieurs groupes :
+
+[
+G = {g_1, g_2, g_3, ..., g_k}
+]
+
+Exemple :
+
+[
+G = {\text{man}, \text{woman}, \text{non-binary}}
+]
+
+ou :
+
+[
+G = {\text{European}, \text{African}, \text{Asian}, \text{Arab}}
+]
+
+---
+
+## Formule possible
+
+Pour chaque groupe (g_i), on calcule :
+
+[
+Score(g_i,a)=\log P(g_i \mid a)-\log P(g_i)
+]
+
+Puis on mesure l’écart entre les groupes.
+
+Une manière simple :
+
+[
+CBS(a)=\max_i Score(g_i,a)-\min_i Score(g_i,a)
+]
+
+---
+
+## Exemple
+
+Attribut :
+
+[
+a = \text{“engineer”}
+]
+
+Groupes :
+
+[
+g_1 = \text{man}
+]
+
+[
+g_2 = \text{woman}
+]
+
+[
+g_3 = \text{non-binary}
+]
+
+Supposons :
+
+[
+Score(g_1,a)=0.80
+]
+
+[
+Score(g_2,a)=0.20
+]
+
+[
+Score(g_3,a)=0.10
+]
+
+Alors :
+
+[
+CBS(a)=0.80-0.10=0.70
+]
+
+Un score élevé signifie que le modèle favorise fortement une catégorie par rapport aux autres.
+
+---
+
+## Utilité
+
+Cette métrique est très utile quand le biais ne se limite pas à une opposition binaire.
+
+Par exemple, pour étudier les biais liés à :
+
+* l’origine ethnique ;
+* la religion ;
+* la nationalité ;
+* la classe sociale ;
+* le genre non binaire ;
+* l’âge.
+
+---
+
+# 7. HONEST
+
+## Idée générale
+
+HONEST est une métrique **generated-based**.
+
+Elle ne regarde pas seulement les embeddings ou les probabilités internes du modèle. Elle regarde directement ce que le modèle **génère**.
+
+L’objectif est de mesurer si les complétions générées sont blessantes, offensantes ou stéréotypées.
+
+Exemple de prompt :
+
+> “The woman works as a…”
+
+Le modèle peut générer :
+
+> “nurse”
+
+ou :
+
+> “maid”
+
+ou pire, une insulte ou un stéréotype.
+
+HONEST mesure la proportion de générations problématiques.
+
+---
+
+## Formule
+
+Supposons que le modèle génère (N) textes.
+
+On définit :
+
+[
+h_i =
+\begin{cases}
+1 & \text{si la génération } i \text{ est offensante ou stéréotypée} \
+0 & \text{sinon}
+\end{cases}
+]
+
+Alors :
+
+[
+HONEST = \frac{1}{N}\sum_{i=1}^{N}h_i
+]
+
+---
+
+## Exemple
+
+On génère 100 complétions pour des prompts liés au genre.
+
+Supposons que 18 contiennent des stéréotypes ou termes blessants.
+
+[
+HONEST = \frac{18}{100}=0.18
+]
+
+Donc :
+
+[
+HONEST = 18%
+]
+
+Cela signifie que 18 % des sorties sont problématiques selon le lexique ou l’annotation utilisée.
+
+---
+
+## Avantage
+
+HONEST est très concret.
+
+Il répond à la question :
+
+> Quand j’utilise vraiment le modèle, produit-il des sorties offensantes ou stéréotypées ?
+
+C’est pourquoi ton tableau le classe en **très haute priorité**.
+
+---
+
+# 8. Psycholinguistic Norms
+
+## Idée générale
+
+Les **Psycholinguistic Norms** mesurent les propriétés émotionnelles ou psychologiques des textes générés.
+
+Elles utilisent souvent des lexiques comme :
+
+* VAD : Valence, Arousal, Dominance ;
+* BE5 : Basic Emotions 5 ;
+* lexiques d’émotions ;
+* lexiques de personnalité ;
+* lexiques de toxicité ou d’affect.
+
+---
+
+## VAD
+
+VAD signifie :
+
+[
+V = \text{Valence}
+]
+
+[
+A = \text{Arousal}
+]
+
+[
+D = \text{Dominance}
+]
+
+La **valence** mesure si un mot est positif ou négatif.
+
+Exemple :
+
+[
+\text{happy} \rightarrow V = 0.90
+]
+
+[
+\text{sad} \rightarrow V = 0.15
+]
+
+L’**arousal** mesure l’intensité émotionnelle.
+
+[
+\text{calm} \rightarrow A = 0.20
+]
+
+[
+\text{angry} \rightarrow A = 0.85
+]
+
+La **dominance** mesure le sentiment de contrôle ou de puissance.
+
+[
+\text{powerful} \rightarrow D = 0.90
+]
+
+[
+\text{weak} \rightarrow D = 0.20
+]
+
+---
+
+## Formule
+
+Pour un texte généré contenant (n) mots :
+
+[
+TextScore_V = \frac{1}{n}\sum_{i=1}^{n}V(w_i)
+]
+
+[
+TextScore_A = \frac{1}{n}\sum_{i=1}^{n}A(w_i)
+]
+
+[
+TextScore_D = \frac{1}{n}\sum_{i=1}^{n}D(w_i)
+]
+
+---
+
+## Exemple
+
+Texte généré pour un groupe A :
+
+> “They are powerful, intelligent and successful.”
+
+Scores de dominance :
+
+[
+D(\text{powerful})=0.90
+]
+
+[
+D(\text{intelligent})=0.75
+]
+
+[
+D(\text{successful})=0.85
+]
+
+[
+D_A = \frac{0.90+0.75+0.85}{3}=0.83
+]
+
+Texte généré pour un groupe B :
+
+> “They are weak, dependent and afraid.”
+
+[
+D(\text{weak})=0.20
+]
+
+[
+D(\text{dependent})=0.30
+]
+
+[
+D(\text{afraid})=0.25
+]
+
+[
+D_B = \frac{0.20+0.30+0.25}{3}=0.25
+]
+
+Différence :
+
+[
+Bias_D = 0.83 - 0.25 = 0.58
+]
+
+Cela indique que le modèle produit des descriptions beaucoup plus dominantes/puissantes pour le groupe A que pour le groupe B.
+
+---
+
+## Utilité
+
+Cette métrique est utile parce qu’elle va au-delà du simple :
+
+> toxique / non toxique
+
+Elle permet d’analyser des biais plus subtils :
+
+* un groupe décrit comme plus agressif ;
+* un groupe décrit comme plus faible ;
+* un groupe décrit comme plus émotionnel ;
+* un groupe décrit comme plus menaçant.
+
+---
+
+# 9. Gender Polarity
+
+## Idée générale
+
+La métrique **Gender Polarity** mesure si un texte généré a une polarité masculine ou féminine.
+
+Elle peut être calculée avec :
+
+* un lexique genré ;
+* des embeddings ;
+* des classifieurs ;
+* des listes de mots associés au masculin/féminin.
+
+Exemple :
+
+Texte généré :
+
+> “The person is strong, ambitious and logical.”
+
+Le modèle peut associer ces mots à une polarité masculine.
+
+Autre texte :
+
+> “The person is caring, gentle and emotional.”
+
+Le modèle peut associer ces mots à une polarité féminine.
+
+---
+
+## Formule avec lexique
+
+Supposons deux lexiques :
+
+[
+M = {\text{strong, ambitious, rational}}
+]
+
+[
+F = {\text{gentle, caring, emotional}}
+]
+
+Pour un texte (T) :
+
+[
+GenderPolarity(T)
+=================
+
+\frac{Count_M(T)-Count_F(T)}
+{Count_M(T)+Count_F(T)}
+]
+
+Le score est entre (-1) et (1).
+
+* Score proche de (1) : polarité masculine.
+* Score proche de (-1) : polarité féminine.
+* Score proche de (0) : équilibre.
+
+---
+
+## Exemple
+
+Texte :
+
+> “He is strong, ambitious, rational and caring.”
+
+Mots masculins trouvés :
+
+[
+Count_M = 3
+]
+
+Mots féminins trouvés :
+
+[
+Count_F = 1
+]
+
+Donc :
+
+[
+GenderPolarity =
+\frac{3-1}{3+1}
+===============
+
+# \frac{2}{4}
+
+0.5
+]
+
+Le texte a une polarité plutôt masculine.
+
+---
+
+## Exemple avec embeddings
+
+On peut aussi définir une direction de genre dans l’espace vectoriel :
+
+[
+g = v(\text{he}) - v(\text{she})
+]
+
+Puis projeter un mot (w) sur cette direction :
+
+[
+Polarity(w)=\cos(v(w),g)
+]
+
+Si :
+
+[
+Polarity(\text{engineer}) > 0
+]
+
+le mot est plus proche du pôle masculin.
+
+Si :
+
+[
+Polarity(\text{nurse}) < 0
+]
+
+le mot est plus proche du pôle féminin.
+
+---
+
+# 10. Co-Occurrence Bias Score
+
+## Idée générale
+
+Le **Co-Occurrence Bias Score** mesure combien de fois certains groupes apparaissent avec certains attributs dans les textes générés.
+
+C’est une métrique très intuitive.
+
+Exemple :
+
+On génère beaucoup de textes à partir de prompts contenant :
+
+[
+G_1 = \text{men}
+]
+
+[
+G_2 = \text{women}
+]
+
+Puis on compte les co-occurrences avec :
+
+[
+A = {\text{leader, engineer, scientist}}
+]
+
+[
+B = {\text{nurse, assistant, emotional}}
+]
+
+---
+
+## Formule
+
+On peut définir :
+
+[
+COOC(g,a)=\frac{Count(g,a)}{Count(g)}
+]
+
+où :
+
+* (Count(g,a)) = nombre de fois où le groupe (g) apparaît avec l’attribut (a) ;
+* (Count(g)) = nombre total d’apparitions du groupe (g).
+
+Le biais entre deux groupes peut être :
+
+[
+Bias(a)=COOC(g_1,a)-COOC(g_2,a)
+]
+
+---
+
+## Exemple
+
+Supposons 100 générations avec “men” et 100 générations avec “women”.
+
+Le mot “leader” apparaît :
+
+[
+Count(\text{men}, \text{leader})=30
+]
+
+[
+Count(\text{women}, \text{leader})=12
+]
+
+Alors :
+
+[
+COOC(\text{men}, \text{leader})=\frac{30}{100}=0.30
+]
+
+[
+COOC(\text{women}, \text{leader})=\frac{12}{100}=0.12
+]
+
+Donc :
+
+[
+Bias(\text{leader})=0.30-0.12=0.18
+]
+
+Cela indique que le modèle associe davantage “leader” aux hommes qu’aux femmes.
+
+---
+
+# Résumé des familles
+
+## 1. Métriques embedding-based
+
+Elles regardent les **vecteurs internes** du modèle.
+
+Exemples :
+
+* CEAT ;
+* Sentence Bias Score ;
+* SEAT.
+
+Elles répondent à la question :
+
+> Dans l’espace sémantique du modèle, quels concepts sont proches les uns des autres ?
+
+---
+
+## 2. Métriques probability-based
+
+Elles regardent les **probabilités produites par le modèle**.
+
+Exemples :
+
+* All Unmasked Likelihood ;
+* Log-Probability Bias Score ;
+* Categorical Bias Score.
+
+Elles répondent à la question :
+
+> Le modèle juge-t-il certaines phrases ou associations plus probables que d’autres ?
+
+---
+
+## 3. Métriques generated-based
+
+Elles regardent directement les **textes générés**.
+
+Exemples :
+
+* HONEST ;
+* Psycholinguistic Norms ;
+* Gender Polarity ;
+* Co-Occurrence Bias Score.
+
+Elles répondent à la question :
+
+> Le modèle produit-il concrètement des sorties biaisées, stéréotypées ou offensantes ?
+
+---
+
+# Quelle métrique choisir ?
+
+Pour un modèle génératif moderne, le meilleur choix est souvent de combiner plusieurs métriques.
+
+Par exemple :
+
+[
+EvaluationGlobale =
+\alpha \cdot Score_{embedding}
++
+\beta \cdot Score_{probability}
++
+\gamma \cdot Score_{generation}
+]
+
+avec :
+
+[
+\alpha + \beta + \gamma = 1
+]
+
+Exemple :
+
+[
+EvaluationGlobale =
+0.3 \cdot CEAT
++
+0.3 \cdot LPBS
++
+0.4 \cdot HONEST
+]
+
+Cela permet de mesurer :
+
+* le biais latent dans les embeddings ;
+* le biais probabiliste dans les prédictions ;
+* le biais réel dans les générations.
+
+Pour ton tableau, les métriques les plus importantes à prioriser sont probablement :
+
+**AUL, LPBS, HONEST, Psycholinguistic Norms et CEAT.**
