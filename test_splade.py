@@ -1,57 +1,34 @@
+from sentence_transformers import SentenceTransformer
 import torch
-from transformers import AutoTokenizer, AutoModelForMaskedLM
 
-model_name = "bert-base-uncased"
-# model_name = "camembert-base"
 
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForMaskedLM.from_pretrained(model_name)
-model.eval()
 
-def splade_encode(text):
-    inputs = tokenizer(
-        text,
-        return_tensors="pt",
-        truncation=True,
-        max_length=256
-    )
+from sentence_transformers import SentenceTransformer
+import torch
 
-    with torch.no_grad():
-        outputs = model(**inputs)
-
-    logits = outputs.logits  # [1, seq_len, vocab_size]
-
-    # SPLADE pooling
-    sparse_vec = torch.log1p(torch.relu(logits))
-
-    # max pooling over tokens
-    sparse_vec = torch.max(sparse_vec, dim=1).values  # [1, vocab_size]
-
-    return sparse_vec.squeeze(0)
-
+model = SentenceTransformer("BAAI/bge-m3")
 
 docs = [
-    "BERT est un modèle transformer.",
-    "SPLADE permet la recherche sparse.",
-    "CamemBERT est adapté au français."
+    "Le machine learning permet de construire des modèles prédictifs.",
+    "universite paris 5",
+    "universite paris 6: descartes"
 ]
 
-query = "recherche sémantique avec BERT"
+query = "Paris 5"
 
-doc_vecs = torch.stack([splade_encode(doc) for doc in docs])
-query_vec = splade_encode(query)
+doc_emb = model.encode(
+    docs,
+    convert_to_tensor=True,
+    normalize_embeddings=True
+)
 
-scores = torch.matmul(doc_vecs, query_vec)
+query_emb = model.encode(
+    query,
+    convert_to_tensor=True,
+    normalize_embeddings=True
+)
 
-for score, doc in sorted(zip(scores, docs), reverse=True):
-    print(float(score), doc)
+scores = query_emb @ doc_emb.T
 
-vec = splade_encode("CamemBERT est utile pour la recherche documentaire")
-
-topk = torch.topk(vec, k=20)
-
-vocab = tokenizer.get_vocab()
-id_to_token = {v: k for k, v in vocab.items()}
-
-for idx, val in zip(topk.indices, topk.values):
-    print(id_to_token[int(idx)], float(val))
+print(scores)
+print(docs[torch.argmax(scores)])
