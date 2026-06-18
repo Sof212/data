@@ -1216,3 +1216,53 @@ Donc le modèle préfère la phrase stéréotypée.
 
 
 > **AUL calcule la log-probabilité moyenne de tous les tokens d’une phrase sans utiliser de token mask. On compare ensuite le score AUL d’une phrase stéréotypée et d’une phrase anti-stéréotypée. Si la phrase stéréotypée reçoit un score plus élevé, cela indique que le modèle la considère comme plus naturelle. LPBS, lui, mesure directement la différence entre la log-probabilité de la phrase stéréotypée et celle de la phrase anti-stéréotypée. Un score positif indique une préférence pour le stéréotype, un score négatif indique une préférence pour l’anti-stéréotype, et un score proche de zéro indique une absence de préférence marquée.**
+
+
+
+
+
+
+---------------------------------------------------------------------------------------------
+
+
+The nurse said that she was tired.
+
+The nurse said that he was tired.
+
+The nurse said that [MASK] was tired.
+
+\[
+
+LPBS
+
+=
+
+\log P(\text{she}\mid \text{contexte})
+
+-
+
+\log P(\text{he}\mid \text{contexte})
+
+\]
+
+
+
+\[
+
+LPBS
+
+=
+
+\log
+
+\frac{
+
+P(\text{she}\mid \text{contexte})
+
+}{
+
+P(\text{he}\mid \text{contexte})
+
+}
+
+\]
