@@ -348,3 +348,871 @@ Pour une présentation rigoureuse dans un mémoire de fin d'études, il est cons
 ---
 
 *Document produit pour accompagner le notebook Evaluation_Biais_LLM_Memoire.ipynb*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 1. AUL — **All Unmasked Likelihood**
+
+
+
+## Idée intuitive
+
+
+
+**AUL** sert à mesurer quelle phrase un modèle de langage trouve la plus naturelle.
+
+
+
+Exemple :
+
+
+
+```text
+
+S_stereo = The nurse said that she was tired.
+
+S_anti   = The nurse said that he was tired.
+
+```
+
+
+
+Si le modèle donne un meilleur score à :
+
+
+
+```text
+
+The nurse said that she was tired.
+
+```
+
+
+
+alors il favorise la phrase stéréotypée.
+
+
+
+---
+
+
+
+# 2. Problème des anciens scores
+
+
+
+Pour les modèles comme BERT, on utilisait souvent le `[MASK]`.
+
+
+
+Exemple :
+
+
+
+```text
+
+The nurse said that [MASK] was tired.
+
+```
+
+
+
+Puis on compare :
+
+
+
+```text
+
+P(she | contexte)
+
+P(he | contexte)
+
+```
+
+
+
+Mais le problème est que BERT a été pré-entraîné avec `[MASK]`, alors que dans une vraie phrase, il n’y a pas toujours `[MASK]`.
+
+
+
+AUL évite ce problème.
+
+
+
+---
+
+
+
+# 3. Définition mathématique de AUL
+
+
+
+Soit une phrase :
+
+
+
+```text
+
+S = (w_1, w_2, ..., w_n)
+
+```
+
+
+
+où :
+
+
+
+* (w_i) est le mot numéro (i),
+
+* (n) est le nombre de tokens dans la phrase.
+
+
+
+AUL calcule la log-probabilité moyenne de tous les tokens **sans masquer la phrase**.
+
+
+
+[
+
+\boxed{
+
+AUL(S)
+
+======
+
+
+
+\frac{1}{n}
+
+\sum_{i=1}^{n}
+
+\log P_{\theta}(w_i \mid S)
+
+}
+
+]
+
+
+
+Cela signifie :
+
+
+
+> Pour chaque mot de la phrase, le modèle regarde quelle probabilité il donne au vrai mot, puis on fait la moyenne des log-probabilités.
+
+
+
+---
+
+
+
+## Exemple intuitif
+
+
+
+Phrase :
+
+
+
+```text
+
+The nurse said that she was tired.
+
+```
+
+
+
+Tokens :
+
+
+
+[
+
+S = (w_1, w_2, ..., w_7)
+
+]
+
+
+
+AUL calcule :
+
+
+
+[
+
+AUL(S)
+
+======
+
+
+
+\frac{1}{7}
+
+[
+
+\log P(The|S)
+
++
+
+\log P(nurse|S)
+
++
+
+\log P(said|S)
+
++
+
+\log P(that|S)
+
++
+
+\log P(she|S)
+
++
+
+\log P(was|S)
+
++
+
+\log P(tired|S)
+
+]
+
+]
+
+
+
+---
+
+
+
+# 4. Comparaison stéréotype / anti-stéréotype
+
+
+
+On calcule :
+
+
+
+[
+
+AUL(S_{stereo})
+
+]
+
+
+
+et
+
+
+
+[
+
+AUL(S_{anti})
+
+]
+
+
+
+Puis on compare.
+
+
+
+Le score de biais peut être écrit :
+
+
+
+[
+
+\boxed{
+
+Bias_{AUL}
+
+==========
+
+
+
+## AUL(S_{stereo})
+
+
+
+AUL(S_{anti})
+
+}
+
+]
+
+
+
+---
+
+
+
+# 5. Interprétation de AUL
+
+
+
+## Si :
+
+
+
+[
+
+Bias_{AUL} > 0
+
+]
+
+
+
+alors :
+
+
+
+[
+
+AUL(S_{stereo}) > AUL(S_{anti})
+
+]
+
+
+
+Donc le modèle préfère la phrase stéréotypée.
+
+
+
+Exemple :
+
+
+
+```text
+
+The nurse said that she was tired.
+
+```
+
+
+
+est préférée à :
+
+
+
+```text
+
+The nurse said that he was tired.
+
+```
+
+
+
+---
+
+
+
+## Si :
+
+
+
+[
+
+Bias_{AUL} < 0
+
+]
+
+
+
+alors le modèle préfère la phrase anti-stéréotypée.
+
+
+
+---
+
+
+
+## Si :
+
+
+
+[
+
+Bias_{AUL} \approx 0
+
+]
+
+
+
+alors le modèle ne montre pas de préférence claire.
+
+
+
+---
+
+
+
+# 6. Pourquoi on divise par (n) ?
+
+
+
+Dans :
+
+
+
+[
+
+AUL(S)
+
+======
+
+
+
+\frac{1}{n}
+
+\sum_{i=1}^{n}
+
+\log P_{\theta}(w_i \mid S)
+
+]
+
+
+
+on divise par (n) pour éviter qu’une phrase longue ait automatiquement un score plus bas.
+
+
+
+Sans moyenne :
+
+
+
+[
+
+\sum_{i=1}^{n}\log P(w_i|S)
+
+]
+
+
+
+les phrases longues accumulent beaucoup de valeurs négatives.
+
+
+
+Donc elles seraient pénalisées simplement parce qu’elles sont longues.
+
+
+
+Avec la moyenne, on compare mieux les phrases.
+
+
+
+---
+
+
+
+# 7. AULA — variante pondérée par attention
+
+
+
+Il existe aussi une variante appelée **AULA** :
+
+
+
+> **All Unmasked Likelihood with Attention weights**
+
+
+
+L’idée est que tous les mots n’ont pas la même importance.
+
+
+
+Dans :
+
+
+
+```text
+
+The nurse said that she was tired.
+
+```
+
+
+
+le mot important pour le biais est surtout :
+
+
+
+```text
+
+she
+
+```
+
+
+
+AULA donne donc plus de poids aux tokens importants.
+
+
+
+La formule est :
+
+
+
+[
+
+\boxed{
+
+AULA(S)
+
+=======
+
+
+
+\frac{1}{n}
+
+\sum_{i=1}^{n}
+
+\alpha_i
+
+\log P_{\theta}(w_i \mid S)
+
+}
+
+]
+
+
+
+où :
+
+
+
+* (\alpha_i) est le poids d’attention du token (w_i),
+
+* plus (\alpha_i) est grand, plus le token compte dans le score.
+
+
+
+---
+
+
+
+# 8. LPBS — **Log Probability Bias Score**
+
+
+
+## Idée intuitive
+
+
+
+**LPBS** mesure directement la différence de probabilité entre deux alternatives.
+
+
+
+Exemple :
+
+
+
+```text
+
+The nurse said that she was tired.
+
+The nurse said that he was tired.
+
+```
+
+
+
+LPBS regarde :
+
+
+
+[
+
+\log P(\text{phrase stéréotypée})
+
+---------------------------------
+
+
+
+\log P(\text{phrase anti-stéréotypée})
+
+]
+
+
+
+---
+
+
+
+# 9. Formule générale de LPBS
+
+
+
+[
+
+\boxed{
+
+LPBS
+
+====
+
+
+
+## \log P_{\theta}(S_{stereo})
+
+
+
+\log P_{\theta}(S_{anti})
+
+}
+
+]
+
+
+
+ou, de façon équivalente :
+
+
+
+[
+
+\boxed{
+
+LPBS
+
+====
+
+
+
+\log
+
+\frac{
+
+P_{\theta}(S_{stereo})
+
+}{
+
+P_{\theta}(S_{anti})
+
+}
+
+}
+
+]
+
+
+
+Car :
+
+
+
+[
+
+\log(a)-\log(b)
+
+===============
+
+
+
+\log\left(\frac{a}{b}\right)
+
+]
+
+
+
+---
+
+
+
+# 10. Interprétation de LPBS
+
+
+
+## Si :
+
+
+
+[
+
+LPBS > 0
+
+]
+
+
+
+alors :
+
+
+
+[
+
+P(S_{stereo}) > P(S_{anti})
+
+]
+
+
+
+Donc le modèle favorise le stéréotype.
+
+
+
+---
+
+
+
+## Si :
+
+
+
+[
+
+LPBS < 0
+
+]
+
+
+
+alors :
+
+
+
+[
+
+P(S_{stereo}) < P(S_{anti})
+
+]
+
+
+
+Donc le modèle favorise l’anti-stéréotype.
+
+
+
+---
+
+
+
+## Si :
+
+
+
+[
+
+LPBS \approx 0
+
+]
+
+
+
+alors :
+
+
+
+[
+
+P(S_{stereo}) \approx P(S_{anti})
+
+]
+
+
+
+Donc il n’y a pas de préférence forte.
+
+
+
+---
+
+
+
+# 11. Exemple numérique LPBS
+
+
+
+Supposons :
+
+
+
+[
+
+\log P(S_{stereo}) = -12.3
+
+]
+
+
+
+et :
+
+
+
+[
+
+\log P(S_{anti}) = -13.1
+
+]
+
+
+
+Alors :
+
+
+
+[
+
+LPBS = -12.3 - (-13.1)
+
+]
+
+
+
+[
+
+LPBS = 0.8
+
+]
+
+
+
+Le score est positif.
+
+
+
+Donc le modèle préfère la phrase stéréotypée.
+
+
+
+---
+
+
+
+# 12. Différence entre AUL et LPBS
+
+
+
+| Méthode  | Ce qu’elle mesure                                                                        |
+
+| -------- | ---------------------------------------------------------------------------------------- |
+
+| **AUL**  | Score moyen de vraisemblance de tous les tokens d’une phrase                             |
+
+| **LPBS** | Différence directe entre la log-probabilité d’une phrase stéréotypée et anti-stéréotypée |
+
+
+
+---
+
+
+
+# 13. Phrase parfaite pour l’oral
+
+
+
+> **AUL calcule la log-probabilité moyenne de tous les tokens d’une phrase sans utiliser de token mask. On compare ensuite le score AUL d’une phrase stéréotypée et d’une phrase anti-stéréotypée. Si la phrase stéréotypée reçoit un score plus élevé, cela indique que le modèle la considère comme plus naturelle. LPBS, lui, mesure directement la différence entre la log-probabilité de la phrase stéréotypée et celle de la phrase anti-stéréotypée. Un score positif indique une préférence pour le stéréotype, un score négatif indique une préférence pour l’anti-stéréotype, et un score proche de zéro indique une absence de préférence marquée.**
