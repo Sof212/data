@@ -1266,3 +1266,19 @@ P(\text{he}\mid \text{contexte})
 }
 
 \]
+
+
+
+
+
+
+
+
+
+| **Métrique**                                         | **Ce qu'elle mesure**                                                                                                            | **Interprétation**                                                                                                                                                                                                          |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **CEAT (Contextualized Embedding Association Test)** | Mesure l'association implicite entre deux groupes cibles et deux groupes d'attributs à partir des embeddings contextualisés.     | Un **effect size positif ou négatif** indique la direction du biais, tandis qu'une **valeur absolue élevée** indique un biais plus important. La **p-value** permet de savoir si ce biais est statistiquement significatif. |
+| **SBS (Stereotype Bias Score)**                      | Mesure la préférence du modèle pour une phrase stéréotypée par rapport à une phrase anti-stéréotypée.                            | **SBS > 0** : le modèle favorise les stéréotypes. **SBS ≈ 0** : peu de biais. **SBS < 0** : préférence pour les phrases anti-stéréotypées.                                                                                  |
+| **AUL (All Unmasked Likelihood)**                    | Mesure la probabilité globale qu'un modèle attribue à une phrase entière.                                                        | Une **AUL plus élevée** signifie que le modèle considère la phrase plus naturelle ou plus probable. Comparer deux phrases permet de détecter une préférence ou un biais implicite.                                          |
+| **LPBS (Log Probability Bias Score)**                | Compare les log-probabilités attribuées à deux phrases qui diffèrent uniquement par un attribut sensible (genre, origine, etc.). | **LPBS proche de 0** : faible biais. Une **valeur positive ou négative importante** indique une préférence du modèle pour une des deux formulations.                                                                        |
+
