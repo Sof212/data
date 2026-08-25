@@ -1,0 +1,23 @@
+Voici les deux blocs, avec la même formulation (« comme nous sommes rattachés à l'entité RHG... ») reprise dans les deux sections pour que le fil soit cohérent d'un bout à l'autre du mémoire.
+
+---
+
+## 1. Partie entreprise — « Contexte de l'alternance »
+
+> Ce travail a été mené pendant mon alternance chez BNP Paribas, au sein de l'entité RHG, dans l'équipe People Analytics, accompagné par Imane Loukah, Lead Data Scientist. J'y ai rapproché une question scientifique, la mesure des biais de genre, des contraintes réelles d'une entreprise.
+>
+> Ce choix de sujet n'est pas neutre : comme nous sommes rattachés à l'entité RHG, au sein de l'équipe People Analytics, les données et les outils que nous manipulons touchent directement aux parcours professionnels — recrutement, mobilité interne, évaluation, communication RH. Un modèle génératif utilisé dans ce périmètre, pour rédiger une offre d'emploi, résumer un profil ou préparer une communication, intervient donc directement dans des décisions qui concernent des personnes.
+>
+> Une précision s'impose : il s'agit d'un benchmark académique, construit sur des données et des scénarios fictifs. Ce n'est pas un audit de BNP Paribas ni de l'entité RHG, et aucune donnée de client ou de salarié n'y est utilisée. Je cherche seulement à proposer une méthode reproductible, susceptible de servir ensuite à une analyse de risque plus large.
+
+---
+
+## 2. Lien dans « Contexte et motivation »
+
+Dernière phrase du paragraphe actuel à remplacer par :
+
+> Ce mémoire ne constitue pas un audit de BNP Paribas et n'utilise pas de données internes. Comme nous sommes rattachés à l'entité RHG, au sein de l'équipe People Analytics, mon expérience en alternance sert ici de contexte professionnel : les usages RH — recrutement, gestion des talents, communication interne — comptent parmi les cas où un texte généré peut influencer une décision individuelle, ce qui rend la question du biais de genre particulièrement concrète dans ce domaine. Ce mémoire construit, à partir de cette observation, une méthode d'évaluation du biais de genre avant l'utilisation d'un modèle dans un cas d'usage défini.
+
+---
+
+Les deux textes se répondent maintenant par la même accroche, sans se répéter mot pour mot. Dites-moi si vous voulez que je répercute ça sur la slide « Contexte » de la présentation aussi, pour garder les trois supports alignés.
