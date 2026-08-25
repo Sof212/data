@@ -1,1 +1,7 @@
-Ce choix répond à trois critères : des modèles reconnus dans la littérature scientifique, diffusés en open source, et surtout accessibles dans l'écosystème technique de BNP Paribas — condition nécessaire pour qu'un protocole de ce type soit reproductible et directement réutilisable dans un cas d'usage interne, sans dépendre d'un accès externe soumis à des contraintes de gouvernance supplémentaires
+11.3 Livrables : des fonctions réutilisables
+
+Au-delà du notebook d'exécution, chaque métrique présentée dans ce mémoire a été isolée sous la forme d'une fonction Python autonome et bien définie — WEAT, SEAT, CEAT côté embeddings ; LPBS, PLL, AUL et AULA côté probabilités ; score lexical, polarité de genre et écart apparié côté générations. Chacune prend en entrée un modèle et des données, indépendamment du corpus spécifique utilisé dans cette étude.
+
+Le même principe s'applique à la lecture statistique commune aux trois familles : intervalle de confiance par bootstrap apparié, p-value par permutation et correction de Benjamini-Hochberg pour la q-value sont également disponibles sous forme de fonctions séparées. Une équipe souhaitant auditer un nouveau modèle ou un nouveau cas d'usage peut ainsi reprendre ces fonctions sans reconstruire le protocole depuis zéro.
+
+Ces fonctions restent des outils de mesure, pas un service validé pour la production : leur intégration dans un cas d'usage réel suppose une revue par les équipes compétentes en risque, conformité et sécurité, au même titre que tout résultat obtenu avec ce protocole (cf. 11.1).
