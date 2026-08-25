@@ -1,7 +1,27 @@
-11.3 Livrables : des fonctions réutilisables
+Vous avez raison — plusieurs paragraphes rejouaient des idées déjà posées ailleurs (traçabilité en 10.3, refus du score unique en 9.3, formules déjà données dans les slides/chapitre méthode). Voici une version resserrée qui ne garde que ce qui est *propre au code*, pas à la méthode elle-même.
 
-Au-delà du notebook d'exécution, chaque métrique présentée dans ce mémoire a été isolée sous la forme d'une fonction Python autonome et bien définie — WEAT, SEAT, CEAT côté embeddings ; LPBS, PLL, AUL et AULA côté probabilités ; score lexical, polarité de genre et écart apparié côté générations. Chacune prend en entrée un modèle et des données, indépendamment du corpus spécifique utilisé dans cette étude.
+**Ce que j'ai retiré et pourquoi :**
+- « Traçabilité et reproductibilité » → supprimé en entier, doublon quasi mot pour mot de 10.3 juste avant.
+- « Performance et coût » → supprimé, cette matière appartient à 10.7 (Coût de calcul et compromis opérationnel), qui existe déjà dans votre plan mais reste à rédiger.
+- « Calcul des métriques probabilistes » → gardé seulement ce qui est un choix de code (comment c'est implémenté), retiré ce qui réexplique ce que mesure PLL/LPBS (déjà donné ailleurs).
+- « Synthèse inter-métriques » → réduit à une phrase, l'argument de fond est déjà fait en 9.3.
 
-Le même principe s'applique à la lecture statistique commune aux trois familles : intervalle de confiance par bootstrap apparié, p-value par permutation et correction de Benjamini-Hochberg pour la q-value sont également disponibles sous forme de fonctions séparées. Une équipe souhaitant auditer un nouveau modèle ou un nouveau cas d'usage peut ainsi reprendre ces fonctions sans reconstruire le protocole depuis zéro.
+---
 
-Ces fonctions restent des outils de mesure, pas un service validé pour la production : leur intégration dans un cas d'usage réel suppose une revue par les équipes compétentes en risque, conformité et sécurité, au même titre que tout résultat obtenu avec ce protocole (cf. 11.1).
+## 10.4 Présentation du notebook
+
+Le protocole est implémenté dans un unique notebook Python, organisé en onze sections numérotées et exécutées séquentiellement : installation, stimuli et validation, utilitaires statistiques, embeddings, probabilités sur modèles masqués, probabilités sur modèles causaux, générations, benchmarks externes, performance, synthèse statistique, robustesse, exports et checklist finale.
+
+**Bibliothèques utilisées.** Quatre groupes de dépendances : *modèles et inférence* (`torch`, `transformers`, `sentence-transformers`, `accelerate`, `huggingface-hub`) ; *calcul scientifique* (`pandas`, `numpy`, `scipy`, `statsmodels`, `scikit-learn`) ; *visualisation* (`matplotlib`, `seaborn`), avec une charte graphique fixée une seule fois pour rester cohérente sur toutes les figures ; *utilitaires* (`tqdm`, `pyarrow`, `datasets`, `openpyxl`).
+
+**Validation automatique des stimuli.** Avant tout calcul, une fonction dédiée exécute dix-sept vérifications formelles sur les données d'entrée : nombre exact de paires attendues, unicité des identifiants, absence de texte vide ou de paire identique entre les deux versions genrées, équilibre des listes de prénoms, présence d'au moins trois modèles par famille issus de lignées différentes, conformité des sous-ensembles réellement exécutés. Le notebook s'arrête si une condition échoue : la cohérence des stimuli est vérifiée par du code, pas seulement par relecture.
+
+**Choix d'implémentation notables.** Un candidat LPBS qui se découpe en plusieurs sous-tokens est rejeté avec un message conservé dans les résultats, plutôt qu'ignoré silencieusement. Pour les modèles causaux, la frontière entre prompt et continuation est repérée par alignement de positions de caractères, pour qu'aucun token ne soit compté à cheval entre les deux. La standardisation en z-score du tableau de synthèse final sert uniquement à l'affichage : les tables exportées gardent les unités d'origine de chaque métrique.
+
+**Adaptateurs pour benchmarks externes.** La section 6 bis prépare l'intégration de CrowS-Pairs, StereoSet et HONEST sans les exécuter par défaut : chaque adaptateur reste commenté tant qu'un fichier de données versionné et documenté (source, licence, empreinte SHA-256) n'a pas été ajouté explicitement. Un lexique VAD suit la même logique. Ce choix évite d'intégrer un corpus externe, ou une norme psycholinguistique, sans en tracer la provenance.
+
+**Robustesse implémentée.** Le code prévoit, au-delà de l'exécution principale : remplacement par des paraphrases et des listes de genre alternatives, comparaison à un décodage glouton et à au moins dix graines, sensibilité testée à la température, à `top_p` et à la tokenisation, réplication partielle en anglais.
+
+---
+
+Ça tient maintenant sur un peu plus d'une page, sans reprendre ce que vous avez déjà écrit ailleurs. Voulez-vous que je fasse aussi un tour rapide des autres sections du mémoire pour repérer d'éventuels autres doublons du même genre ?
